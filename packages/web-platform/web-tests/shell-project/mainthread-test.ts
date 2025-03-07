@@ -66,6 +66,9 @@ function getElementThreadElements() {
 
 function initializeMainThreadTest() {
   const runtime = new MainThreadRuntime({
+    lepusCode: {
+      root: '',
+    },
     customSections: {},
     entryId: 't',
     browserConfig: { supportAtScope: true },

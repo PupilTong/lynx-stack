@@ -54,11 +54,6 @@ export interface MainThreadConfig {
 export class MainThreadRuntime {
   private isFp = true;
 
-  public operationsRef: {
-    operations: ElementOperation[];
-  } = {
-    operations: [],
-  };
   constructor(
     private config: MainThreadConfig,
   ) {
@@ -76,7 +71,6 @@ export class MainThreadRuntime {
       eventApis,
       styleApis,
       initializeElementCreatingFunction({
-        operationsRef: this.operationsRef,
         pageConfig: config.pageConfig,
         onNewTag: config.callbacks.onNewTag,
         styleInfo: cssInJs,
