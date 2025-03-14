@@ -45,3 +45,9 @@ export type ExposureEvent = {
 export type ExposureWorkerEvent =
   & LynxCrossThreadEvent<ExposureEventDetail>
   & ExposureEventDetail;
+
+export type PublishEventCallback = (
+  event: LynxCrossThreadEvent,
+  hname: string,
+  componentId: string,
+) => void;

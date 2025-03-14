@@ -23,3 +23,8 @@ export interface CssInJsInfo {
     [className: string]: [string, string][];
   };
 }
+
+export type UpdateCssInJsStyleByUniqueId = (
+  uniqueId: number,
+  style: string,
+) => void;

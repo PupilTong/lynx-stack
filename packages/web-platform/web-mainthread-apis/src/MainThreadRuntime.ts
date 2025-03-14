@@ -13,20 +13,23 @@ import {
   type Cloneable,
   type CssInJsInfo,
   type BrowserConfig,
+  type PublishEventCallback,
+  type UpdateCssInJsStyleByUniqueId,
 } from '@lynx-js/web-constants';
 import { globalMuteableVars } from '@lynx-js/web-constants';
 import { createMainThreadLynx, type MainThreadLynx } from './MainThreadLynx.js';
 import { initializeElementCreatingFunction } from './elementAPI/elementCreating/elementCreatingFunctions.js';
 import * as attributeAndPropertyApis from './elementAPI/attributeAndProperty/attributeAndPropertyFunctions.js';
 import * as domTreeApis from './elementAPI/domTree/domTreeFunctions.js';
-import * as eventApis from './elementAPI/event/eventFunctions.js';
-import * as styleApis from './elementAPI/style/styleFunctions.js';
+import { createEventFunctions } from './elementAPI/event/eventFunctions.js';
+import { createStyleFunctions } from './elementAPI/style/styleFunctions.js';
 import {
   flattenStyleInfo,
   genCssContent,
   genCssInJsInfo,
   transformToWebCss,
 } from './utils/processStyleInfo.js';
+import type { ElementThreadElement } from './elementAPI/ElementThreadElement.js';
 
 export interface MainThreadRuntimeCallbacks {
   mainChunkReady: () => void;
@@ -38,6 +41,8 @@ export interface MainThreadRuntimeCallbacks {
   _ReportError: (error: Error, info?: unknown) => void;
   __OnLifecycleEvent: (lynxLifecycleEvents: LynxLifecycleEvent) => void;
   markTiming: (pipelineId: string, timingKey: string) => void;
+  publishEvent: PublishEventCallback;
+  updateStyleByUniqueId: UpdateCssInJsStyleByUniqueId;
 }
 
 export interface MainThreadConfig {
@@ -54,11 +59,6 @@ export interface MainThreadConfig {
 export class MainThreadRuntime {
   private isFp = true;
 
-  public operationsRef: {
-    operations: ElementOperation[];
-  } = {
-    operations: [],
-  };
   constructor(
     private config: MainThreadConfig,
   ) {
@@ -66,19 +66,33 @@ export class MainThreadRuntime {
     this.lynx = createMainThreadLynx(config, this);
     flattenStyleInfo(this.config.styleInfo);
     transformToWebCss(this.config.styleInfo);
-    const cssInJs: CssInJsInfo = this.config.pageConfig.enableCSSSelector
+    const cssInJsInfo: CssInJsInfo = this.config.pageConfig.enableCSSSelector
       ? {}
       : genCssInJsInfo(this.config.styleInfo);
     Object.assign(
       this,
       attributeAndPropertyApis,
       domTreeApis,
-      eventApis,
-      styleApis,
-      initializeElementCreatingFunction({
-        operationsRef: this.operationsRef,
+      createEventFunctions({
+        publishEvent: config.callbacks.publishEvent,
+        getElementByUniqueId: function(
+          uniqueId: number,
+        ): ElementThreadElement | undefined {
+          throw new Error('Function not implemented.');
+        },
+      }),
+      createStyleFunctions({
         pageConfig: config.pageConfig,
-        styleInfo: cssInJs,
+        updateCssInJs: config.callbacks.updateStyleByUniqueId,
+        cssInJsInfo,
+      }),
+      initializeElementCreatingFunction({
+        pageConfig: config.pageConfig,
+        styleInfo: cssInJsInfo,
+        operationsRef: {
+          operations: [],
+        },
+        runtime: this,
       }),
     );
     this.__LoadLepusChunk = (path) => {

@@ -4,11 +4,12 @@
 
 import { componentIdAttribute } from '@lynx-js/web-constants';
 import {
+  runtimeInfo,
   type ElementThreadElement,
-  type ComponentAtIndexCallback,
-  type EnqueueComponentCallback,
-  type ListElement,
-  RefCountType,
+  // type ComponentAtIndexCallback,
+  // type EnqueueComponentCallback,
+  // type ListElement,
+  // RefCountType,
 } from '../ElementThreadElement.js';
 
 export function __AddConfig(
@@ -16,7 +17,7 @@ export function __AddConfig(
   type: string,
   value: any,
 ) {
-  element.property.componentConfig[type] = value;
+  element[runtimeInfo].componentConfig[type] = value;
 }
 
 export function __AddDataset(
@@ -24,54 +25,54 @@ export function __AddDataset(
   key: string,
   value: string | number | Record<string, any>,
 ): void {
-  element.setDatasetProperty(key, value);
+  element[runtimeInfo]._lynxDataset[key] = value;
 }
 
-export function __GetAttributes(element: ElementThreadElement) {
-  return element.attributes;
+export function __GetAttributes(
+  element: ElementThreadElement,
+): Record<string, string | null> {
+  return Object.fromEntries(
+    element.getAttributeNames().map((
+      attributeName,
+    ) => [attributeName, element.getAttribute(attributeName)]),
+  );
 }
 
-export function __GetComponentID(element: ElementThreadElement) {
-  return element.attributes[componentIdAttribute];
+export function __GetComponentID(element: ElementThreadElement): string | null {
+  return element.getAttribute(componentIdAttribute);
 }
 
 export function __GetDataByKey(
   element: ElementThreadElement,
   key: string,
 ) {
-  return element.property.dataset[key];
+  return element[runtimeInfo]._lynxDataset[key];
 }
 
 export function __GetDataset(
   element: ElementThreadElement,
 ): Record<string, any> {
-  return element.property.dataset;
+  return element[runtimeInfo]._lynxDataset;
 }
 
 export function __GetElementConfig(
   element: ElementThreadElement,
 ) {
-  return element.property.componentConfig;
+  return element[runtimeInfo].componentConfig;
 }
 
 export function __GetElementUniqueID(
-  element: ElementThreadElement | unknown,
+  element: ElementThreadElement,
 ): number {
-  if (
-    element && typeof element === 'object'
-    && (element as ElementThreadElement).type === RefCountType.Element
-  ) {
-    return (element as ElementThreadElement).uniqueId;
-  }
-  return -1;
+  return element[runtimeInfo].uniqueId ?? -1;
 }
 
 export function __GetID(element: ElementThreadElement): string {
-  return element.attributes.id ?? '';
+  return element.id;
 }
 
 export function __GetTag(element: ElementThreadElement): string {
-  return element.tag;
+  return element[runtimeInfo].lynxTagName;
 }
 
 export function __SetAttribute(
@@ -79,25 +80,26 @@ export function __SetAttribute(
   key: string,
   value: string | null | undefined,
 ): void {
-  element.setAttribute(key, value ?? null);
+  if (value) element.setAttribute(key, value);
+  else element.removeAttribute(key);
 }
 
 export function __SetConfig(
   element: ElementThreadElement,
   config: Record<string, any>,
 ): void {
-  element.property.componentConfig = config;
+  element[runtimeInfo].componentConfig = config;
 }
 
 export function __SetDataset(
   element: ElementThreadElement,
   dataset: Record<string, any>,
 ): void {
-  element.setProperty('dataset', dataset);
+  element[runtimeInfo]._lynxDataset = dataset;
 }
 
 export function __SetID(element: ElementThreadElement, id: string) {
-  element.setAttribute('id', id);
+  element.id = id;
 }
 
 export function __UpdateComponentID(
@@ -110,14 +112,14 @@ export function __UpdateComponentID(
 export function __GetConfig(
   element: ElementThreadElement,
 ) {
-  return element.property.componentConfig;
+  return element[runtimeInfo].componentConfig;
 }
 
-export function __UpdateListCallbacks(
-  list: ListElement,
-  componentAtIndex: ComponentAtIndexCallback,
-  enqueueComponent: EnqueueComponentCallback,
-) {
-  list.componentAtIndex = componentAtIndex;
-  list.enqueueComponent = enqueueComponent;
-}
+// export function __UpdateListCallbacks(
+//   list: ListElement,
+//   componentAtIndex: ComponentAtIndexCallback,
+//   enqueueComponent: EnqueueComponentCallback,
+// ) {
+//   list.componentAtIndex = componentAtIndex;
+//   list.enqueueComponent = enqueueComponent;
+// }

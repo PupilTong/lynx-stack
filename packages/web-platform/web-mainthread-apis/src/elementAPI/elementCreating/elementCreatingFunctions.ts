@@ -10,13 +10,15 @@ import {
 } from '@lynx-js/web-constants';
 import { __UpdateComponentID } from '../attributeAndProperty/attributeAndPropertyFunctions.js';
 import {
-  type ComponentAtIndexCallback,
-  type EnqueueComponentCallback,
-  ListElement,
-  ElementThreadElement,
+  // type ComponentAtIndexCallback,
+  // type EnqueueComponentCallback,
+  // ListElement,
+  type ElementThreadElement,
+  runtimeInfo,
 } from '../ElementThreadElement.js';
-import { __SetCSSId } from '../style/styleFunctions.js';
 import { createOffscreenDocument } from '../createOffscreenDocument.js';
+import type { MainThreadRuntime } from '../../MainThreadRuntime.js';
+import type { createStyleFunctions } from '../style/styleFunctions.js';
 
 export interface initializeElementCreatingFunctionConfig {
   operationsRef: {
@@ -24,31 +26,28 @@ export interface initializeElementCreatingFunctionConfig {
   };
   pageConfig: PageConfig;
   styleInfo: CssInJsInfo;
+  runtime: MainThreadRuntime;
 }
 
 export function initializeElementCreatingFunction(
   config: initializeElementCreatingFunctionConfig,
 ) {
-  const { operationsRef, pageConfig, styleInfo } = config;
+  const { operationsRef, pageConfig, styleInfo, runtime } = config;
+  // @ts-expect-error
+  const __SetCSSId = runtime.__SetCSSId as ReturnType<
+    typeof createStyleFunctions
+  >['__SetCSSId'];
   const document = createOffscreenDocument({
     pageConfig,
     operationsRef,
     styleInfo,
   });
-  function createLynxElement(
-    tag: Exclude<string, 'list'>,
-    parentComponentUniqueId: number,
-    cssId?: number,
-    componentId?: string,
-    info?: Record<string, any> | null | undefined,
-  ): ElementThreadElement;
-  function createLynxElement(
-    tag: 'list',
-    parentComponentUniqueId: number,
-    cssId?: number,
-    componentId?: string,
-    info?: Record<string, any> | null | undefined,
-  ): ListElement;
+  const uniqueIdToElement: (WeakRef<ElementThreadElement> | undefined)[] = [];
+  function getElementByUniqueId(
+    uniqueId: number,
+  ): ElementThreadElement | undefined {
+    return uniqueIdToElement[uniqueId]?.deref();
+  }
   function createLynxElement(
     tag: string,
     parentComponentUniqueId: number,
@@ -58,14 +57,13 @@ export function initializeElementCreatingFunction(
     info?: Record<string, any> | null | undefined,
   ) {
     const element = document.createElement(tag);
-    // element.parentComponentUniqueId = parentComponentUniqueId;
     element.setAttribute(
       parentComponentUniqueIdAttribute,
       parentComponentUniqueId.toString(),
     );
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
-      const parentComponent = ElementThreadElement.getElementByUniqueId(
+      const parentComponent = getElementByUniqueId(
         parentComponentUniqueId,
       );
       const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
@@ -124,7 +122,7 @@ export function initializeElementCreatingFunction(
     const page = createLynxElement('page', 0, cssID, componentID, info);
     page.setAttribute(
       parentComponentUniqueIdAttribute,
-      page.uniqueId.toString(),
+      page[runtimeInfo].uniqueId.toString(),
     );
     return page;
   }
@@ -159,22 +157,31 @@ export function initializeElementCreatingFunction(
     return element;
   }
 
-  function __CreateList(
-    parentComponentUniqueId: number,
-    componentAtIndex: ComponentAtIndexCallback,
-    enqueueComponent: EnqueueComponentCallback,
-    info?: any,
-  ): ListElement {
-    const element = createLynxElement(
-      'list',
-      parentComponentUniqueId,
-      undefined,
-      undefined,
-      info,
-    ) as ListElement;
-    element.componentAtIndex = componentAtIndex;
-    element.enqueueComponent = enqueueComponent;
-    return element;
+  // function __CreateList(
+  //   parentComponentUniqueId: number,
+  //   componentAtIndex: ComponentAtIndexCallback,
+  //   enqueueComponent: EnqueueComponentCallback,
+  //   info?: any,
+  // ): ListElement {
+  //   const element = createLynxElement(
+  //     'list',
+  //     parentComponentUniqueId,
+  //     undefined,
+  //     undefined,
+  //     info,
+  //   ) as ListElement;
+  //   element.componentAtIndex = componentAtIndex;
+  //   element.enqueueComponent = enqueueComponent;
+  //   return element;
+  // }
+  function __SwapElement(
+    childA: ElementThreadElement,
+    childB: ElementThreadElement,
+  ): void {
+    const temp = document.createElement('div');
+    childA.replaceWith(temp);
+    childB.replaceWith(childA);
+    temp.replaceWith(childB);
   }
 
   return {
@@ -187,6 +194,7 @@ export function initializeElementCreatingFunction(
     __CreateScrollView,
     __CreateElement,
     __CreateWrapperElement,
-    __CreateList,
+    // __CreateList,
+    __SwapElement,
   };
 }
