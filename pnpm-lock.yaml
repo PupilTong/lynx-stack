@@ -533,6 +533,12 @@ importers:
         specifier: ^5.98.0
         version: 5.98.0
 
+  packages/web-platform/offscreen-document:
+    dependencies:
+      '@lynx-js/web-worker-rpc':
+        specifier: workspace:*
+        version: link:../web-worker-rpc
+
   packages/web-platform/web-constants:
     dependencies:
       '@lynx-js/web-worker-rpc':
@@ -600,6 +606,9 @@ importers:
 
   packages/web-platform/web-mainthread-apis:
     dependencies:
+      '@lynx-js/offscreen-document':
+        specifier: workspace:*
+        version: link:../offscreen-document
       '@lynx-js/web-constants':
         specifier: workspace:*
         version: link:../web-constants

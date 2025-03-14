@@ -9,13 +9,7 @@
   "include": ["src"],
   "references": [
     {
-      "path": "../web-constants",
-    },
-    {
-      "path": "../web-style-transformer",
-    },
-    {
-      "path": "../offscreen-document",
+      "path": "../web-worker-rpc",
     },
   ],
 }

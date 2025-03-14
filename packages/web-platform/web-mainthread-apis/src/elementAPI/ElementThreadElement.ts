@@ -1,6 +1,7 @@
 // Copyright 2023 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
+import type { OffscreenElement } from '@lynx-js/offscreen-document/worker';
 import {
   componentIdAttribute,
   cssIdAttribute,
@@ -17,15 +18,13 @@ import type {
 
 export const runtimeInfo = Symbol('lynx-runtime-info');
 
-export type ElementThreadElement = HTMLElement & {
+export type ElementThreadElement = (OffscreenElement | HTMLElement) & {
   [runtimeInfo]: LynxRuntimeInfo;
 };
 
 export interface LynxRuntimeInfo {
   componentConfig: Record<string, Cloneable>;
-  _lynxDataset: Record<string, Cloneable>;
-  readonly uniqueId: number;
-  readonly lynxTagName: string;
+  lynxDataset: Record<string, Cloneable>;
   eventHandlerMap: Record<string, {
     capture: {
       type: LynxEventType;

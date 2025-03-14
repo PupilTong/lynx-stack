@@ -2,7 +2,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import { componentIdAttribute } from '@lynx-js/web-constants';
+import { componentIdAttribute, lynxTagAttribute } from '@lynx-js/web-constants';
 import {
   runtimeInfo,
   type ElementThreadElement,
@@ -11,6 +11,7 @@ import {
   // type ListElement,
   // RefCountType,
 } from '../ElementThreadElement.js';
+import { uniqueIdAttribute } from '@lynx-js/offscreen-document/worker';
 
 export function __AddConfig(
   element: ElementThreadElement,
@@ -25,7 +26,7 @@ export function __AddDataset(
   key: string,
   value: string | number | Record<string, any>,
 ): void {
-  element[runtimeInfo]._lynxDataset[key] = value;
+  element[runtimeInfo].lynxDataset[key] = value;
 }
 
 export function __GetAttributes(
@@ -46,13 +47,13 @@ export function __GetDataByKey(
   element: ElementThreadElement,
   key: string,
 ) {
-  return element[runtimeInfo]._lynxDataset[key];
+  return element[runtimeInfo].lynxDataset[key];
 }
 
 export function __GetDataset(
   element: ElementThreadElement,
 ): Record<string, any> {
-  return element[runtimeInfo]._lynxDataset;
+  return element[runtimeInfo].lynxDataset;
 }
 
 export function __GetElementConfig(
@@ -64,7 +65,7 @@ export function __GetElementConfig(
 export function __GetElementUniqueID(
   element: ElementThreadElement,
 ): number {
-  return element[runtimeInfo].uniqueId ?? -1;
+  return Number(element.getAttribute(uniqueIdAttribute));
 }
 
 export function __GetID(element: ElementThreadElement): string {
@@ -72,7 +73,7 @@ export function __GetID(element: ElementThreadElement): string {
 }
 
 export function __GetTag(element: ElementThreadElement): string {
-  return element[runtimeInfo].lynxTagName;
+  return element.getAttribute(lynxTagAttribute)!;
 }
 
 export function __SetAttribute(
@@ -95,7 +96,7 @@ export function __SetDataset(
   element: ElementThreadElement,
   dataset: Record<string, any>,
 ): void {
-  element[runtimeInfo]._lynxDataset = dataset;
+  element[runtimeInfo].lynxDataset = dataset;
 }
 
 export function __SetID(element: ElementThreadElement, id: string) {

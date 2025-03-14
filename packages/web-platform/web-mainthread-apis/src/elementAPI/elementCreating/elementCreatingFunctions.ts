@@ -3,7 +3,6 @@
 // LICENSE file in the root directory of this source tree.
 import {
   type PageConfig,
-  type ElementOperation,
   cssIdAttribute,
   type CssInJsInfo,
   parentComponentUniqueIdAttribute,
@@ -19,10 +18,14 @@ import {
 import { createOffscreenDocument } from '../createOffscreenDocument.js';
 import type { MainThreadRuntime } from '../../MainThreadRuntime.js';
 import type { createStyleFunctions } from '../style/styleFunctions.js';
+import {
+  uniqueIdAttribute,
+  type OffscreenDocument,
+} from '@lynx-js/offscreen-document/worker';
 
 export interface initializeElementCreatingFunctionConfig {
-  operationsRef: {
-    operations: ElementOperation[];
+  document: (OffscreenDocument | Document) & {
+    getElementByUniqueId: (uniqueId: string) => ElementThreadElement | null;
   };
   pageConfig: PageConfig;
   styleInfo: CssInJsInfo;
@@ -32,22 +35,11 @@ export interface initializeElementCreatingFunctionConfig {
 export function initializeElementCreatingFunction(
   config: initializeElementCreatingFunctionConfig,
 ) {
-  const { operationsRef, pageConfig, styleInfo, runtime } = config;
+  const { pageConfig, styleInfo, runtime, document, tagMap } = config;
   // @ts-expect-error
   const __SetCSSId = runtime.__SetCSSId as ReturnType<
     typeof createStyleFunctions
   >['__SetCSSId'];
-  const document = createOffscreenDocument({
-    pageConfig,
-    operationsRef,
-    styleInfo,
-  });
-  const uniqueIdToElement: (WeakRef<ElementThreadElement> | undefined)[] = [];
-  function getElementByUniqueId(
-    uniqueId: number,
-  ): ElementThreadElement | undefined {
-    return uniqueIdToElement[uniqueId]?.deref();
-  }
   function createLynxElement(
     tag: string,
     parentComponentUniqueId: number,
@@ -56,15 +48,20 @@ export function initializeElementCreatingFunction(
     // @ts-expect-error
     info?: Record<string, any> | null | undefined,
   ) {
-    const element = document.createElement(tag);
+    const element = document.createElement(tag) as ElementThreadElement;
+    element[runtimeInfo] = {
+      componentConfig: {},
+      lynxDataset: {},
+      eventHandlerMap: {},
+    };
     element.setAttribute(
       parentComponentUniqueIdAttribute,
       parentComponentUniqueId.toString(),
     );
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
-      const parentComponent = getElementByUniqueId(
-        parentComponentUniqueId,
+      const parentComponent = document.getElementByUniqueId(
+        parentComponentUniqueId.toString(),
       );
       const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
       if (parentCssId && parentCssId !== '0') {
@@ -122,7 +119,7 @@ export function initializeElementCreatingFunction(
     const page = createLynxElement('page', 0, cssID, componentID, info);
     page.setAttribute(
       parentComponentUniqueIdAttribute,
-      page[runtimeInfo].uniqueId.toString(),
+      page.getAttribute(uniqueIdAttribute)!,
     );
     return page;
   }

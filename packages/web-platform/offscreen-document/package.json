@@ -1,5 +1,5 @@
 {
-  "name": "@lynx-js/web-mainthread-apis",
+  "name": "@lynx-js/offscreen-document",
   "version": "0.7.1",
   "private": false,
   "description": "",
@@ -7,10 +7,17 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/lynx-family/lynx-stack.git",
-    "directory": "packages/web-platform/web-mainthread-apis"
+    "directory": "packages/web-platform/offscreen-document"
   },
   "license": "Apache-2.0",
   "type": "module",
+  "exports": {
+    "./worker": {
+      "import": "./dist/worker/index.js",
+      "types": "./dist/worker/index.d.ts",
+      "default": "./dist/worker/index.js"
+    }
+  },
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "files": [
@@ -19,14 +26,9 @@
     "LICENSE.txt",
     "Notice.txt",
     "CHANGELOG.md",
-    "README.md",
-    "**/*.css"
+    "README.md"
   ],
   "dependencies": {
-    "@lynx-js/offscreen-document": "workspace:*",
-    "@lynx-js/web-constants": "workspace:*",
-    "@lynx-js/web-style-transformer": "workspace:*",
-    "css-tree": "^3.1.0",
-    "hyphenate-style-name": "^1.1.0"
+    "@lynx-js/web-worker-rpc": "workspace:*"
   }
 }
