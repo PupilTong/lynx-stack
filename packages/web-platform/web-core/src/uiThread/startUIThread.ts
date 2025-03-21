@@ -18,6 +18,7 @@ import {
   flushElementTreeEndpoint,
   mainThreadChunkReadyEndpoint,
   mainThreadStartEndpoint,
+  offscreenDocumentOnEvent,
   sendGlobalEventEndpoint,
   uiThreadFpReadyEndpoint,
   type MainThreadStartConfigs,
@@ -27,6 +28,7 @@ import {
 import { loadTemplate } from '../utils/loadTemplate.js';
 import { createUpdateData } from './crossThreadHandlers/createUpdateData.js';
 import { registerNapiModulesCallHandler } from './crossThreadHandlers/registerNapiModulesCallHandler.js';
+import { initOffscreenDocument } from './initOffscreenDocument.js';
 
 export function startUIThread(
   templateUrl: string,
@@ -55,6 +57,11 @@ export function startUIThread(
   );
   markTimingInternal('create_lynx_start', undefined, createLynxStartTiming);
   markTimingInternal('load_template_start');
+  const onEvent = mainThreadRpc.createCall(offscreenDocumentOnEvent);
+  const { decodeOperation } = initOffscreenDocument({
+    shadowRoot: rootDom,
+    onEvent,
+  });
   loadTemplate(templateUrl).then((template) => {
     markTimingInternal('load_template_end');
     mainThreadStart({
@@ -68,21 +75,17 @@ export function startUIThread(
     mainThreadRpc,
     callbacks.onError,
   );
+  let isFP = true;
   mainThreadRpc.registerHandler(
     mainThreadChunkReadyEndpoint,
-    (mainChunkInfo) => {
-      const { pageConfig } = mainChunkInfo;
+    () => {
       registerFlushElementTreeHandler(
         mainThreadRpc,
         flushElementTreeEndpoint,
-        {
-          pageConfig,
-          backgroundRpc,
-          rootDom,
-        },
         (info) => {
-          const { pipelineId, timingFlags, isFP } = info;
+          const { pipelineId, timingFlags } = info;
           if (isFP) {
+            isFP = false;
             registerInvokeUIMethodHandler(
               backgroundRpc,
               rootDom,
@@ -105,6 +108,7 @@ export function startUIThread(
           sendTimingResult(pipelineId, timingFlags, isFP);
         },
         markTimingInternal,
+        decodeOperation,
       );
     },
   );

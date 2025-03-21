@@ -9,14 +9,20 @@ import {
   onLifecycleEventEndpoint,
   type LynxJSModule,
   flushElementTreeEndpoint,
+  offscreenDocumentOnEvent,
+  publishEventEndpoint,
+  publicComponentEventEndpoint,
 } from '@lynx-js/web-constants';
 import { Rpc } from '@lynx-js/web-worker-rpc';
 import { MainThreadRuntime } from '@lynx-js/web-mainthread-apis';
 import { registerCallLepusMethodHandler } from './crossThreadHandlers/registerCallLepusMethodHandler.js';
-import { registerPostMainThreadEventHandler } from './crossThreadHandlers/registerPostMainThreadEventHandler.js';
 import { registerGetCustomSectionHandler } from './crossThreadHandlers/registerGetCustomSectionHandler.js';
 import { createMarkTimingInternal } from './crossThreadHandlers/createMainthreadMarkTimingInternal.js';
 import { registerUpdateDataHandler } from './crossThreadHandlers/registerUpdateDataHandler.js';
+import {
+  OffscreenDocument,
+  onEvent,
+} from './offscreenDocument/OffscreenDocument.js';
 
 export function startMainThread(
   uiThreadPort: MessagePort,
@@ -35,6 +41,10 @@ export function startMainThread(
     mainThreadChunkReadyEndpoint,
   );
   const flushElementTree = uiThreadRpc.createCall(flushElementTreeEndpoint);
+  const publishEvent = backgroundThreadRpc.createCall(publishEventEndpoint);
+  const publicComponentEvent = backgroundThreadRpc.createCall(
+    publicComponentEventEndpoint,
+  );
   markTimingInternal('lepus_excute_start');
   uiThreadRpc.registerHandler(
     mainThreadStartEndpoint,
@@ -54,8 +64,14 @@ export function startMainThread(
         /* webpackIgnore: true */ template.lepusCode.root
       );
       const entry = (globalThis.module as LynxJSModule).exports!;
+      const offscreenDocument = new OffscreenDocument();
+      uiThreadRpc.registerHandler(
+        offscreenDocumentOnEvent,
+        offscreenDocument[onEvent],
+      );
       const runtime = new MainThreadRuntime({
         tagMap,
+        docu: offscreenDocument,
         browserConfig,
         customSections,
         globalProps,
@@ -64,7 +80,7 @@ export function startMainThread(
         lepusCode,
         callbacks: {
           mainChunkReady: function(): void {
-            mainThreadChunkReady({ pageConfig });
+            mainThreadChunkReady();
             markTimingInternal('data_processor_start');
             const initData = runtime.processData
               ? runtime.processData(config.initData)
@@ -73,9 +89,6 @@ export function startMainThread(
             registerCallLepusMethodHandler(
               backgroundThreadRpc,
               runtime,
-            );
-            registerPostMainThreadEventHandler(
-              uiThreadRpc,
             );
             registerGetCustomSectionHandler(
               backgroundThreadRpc,
@@ -99,7 +112,6 @@ export function startMainThread(
             runtime.renderPage!(initData);
             runtime.__FlushElementTree(undefined, {});
           },
-          flushElementTree,
           _ReportError: function(error: Error, info?: unknown): void {
             console.error('main-thread:', error, info);
           },
@@ -110,6 +122,11 @@ export function startMainThread(
            * But our markTimingInternal is (timingFlag:string, pipelineId?:string, timeStamp?:number) => void
            */
           markTiming: (a, b) => markTimingInternal(b, a),
+          flushElementTree: (options, timingFlags) => {
+            flushElementTree(options, timingFlags, offscreenDocument.commit());
+          },
+          publishEvent,
+          publicComponentEvent,
         },
       }).globalThis;
       markTimingInternal('decode_end');

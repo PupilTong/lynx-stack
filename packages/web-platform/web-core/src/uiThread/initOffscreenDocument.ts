@@ -1,0 +1,114 @@
+// Copyright 2023 The Lynx Authors. All rights reserved.
+// Licensed under the Apache License Version 2.0 that can be found in the
+// LICENSE file in the root directory of this source tree.
+
+import type { ElementOperation } from '@lynx-js/web-constants';
+import { OperationType } from '@lynx-js/web-constants';
+
+export function initOffscreenDocument(options: {
+  shadowRoot: ShadowRoot | HTMLElement;
+  onEvent: (
+    eventType: string,
+    targetUniqueId: number,
+    bubbles: boolean,
+  ) => void;
+}) {
+  const { shadowRoot, onEvent } = options;
+  const uniqueIdToElement: [
+    WeakRef<ShadowRoot | HTMLElement>,
+    ...(WeakRef<HTMLElement> | undefined)[],
+  ] = [new WeakRef(shadowRoot)];
+  const elementToUniqueId: WeakMap<HTMLElement, number> = new WeakMap();
+
+  function _getElement(
+    uniqueId: number,
+  ): HTMLElement {
+    const element = uniqueIdToElement[uniqueId]?.deref();
+    if (element) {
+      return element as HTMLElement;
+    } else {
+      throw new Error(
+        `[lynx-web] cannot find element with uniqueId: ${uniqueId}`,
+      );
+    }
+  }
+
+  function _eventHandler(ev: Event) {
+    const target = ev.target as HTMLElement | null;
+    if (target && elementToUniqueId.has(target)) {
+      const targetUniqueId = elementToUniqueId.get(target)!;
+      const eventType = ev.type;
+      const bubble = ev.bubbles;
+      onEvent(eventType, targetUniqueId, bubble);
+    }
+  }
+
+  function decodeOperation(operations: ElementOperation[]) {
+    for (const op of operations) {
+      if (op.type === OperationType.CreateElement) {
+        const element = document.createElement(op.tag);
+        uniqueIdToElement[op.uid] = new WeakRef(element);
+        elementToUniqueId.set(element, op.uid);
+      } else {
+        const target = _getElement(op.uid);
+        switch (op.type) {
+          case OperationType.SetAttribute:
+            target.setAttribute(op.key, op.value);
+            break;
+          case OperationType.RemoveAttribute:
+            target.removeAttribute(op.key);
+            break;
+          case OperationType.Append:
+            {
+              const children = op.cid.map(id => _getElement(id));
+              target.append(...children);
+            }
+            break;
+          case OperationType.Remove:
+            target.remove();
+            break;
+          case OperationType.ReplaceWith:
+            const newChildren = op.nid.map(id => _getElement(id));
+            target.replaceWith(...newChildren);
+            break;
+          case OperationType.InsertBefore:
+            {
+              const kid = _getElement(op.cid);
+              const ref = op.ref ? _getElement(op.ref) : null;
+              target.insertBefore(kid, ref);
+            }
+            break;
+          case OperationType.EnableEvent:
+            shadowRoot.addEventListener(op.eventType, _eventHandler, {
+              capture: true,
+              passive: true,
+            });
+            break;
+          case OperationType.RemoveChild:
+            {
+              const kid = _getElement(op.cid);
+              target.removeChild(kid);
+            }
+            break;
+          case OperationType.StyleDeclarationSetProperty:
+            {
+              target.style.setProperty(op.property, op.value, op.priority);
+            }
+            break;
+          case OperationType.StyleDeclarationRemoveProperty:
+            {
+              target.style.removeProperty(op.property);
+            }
+            break;
+          case OperationType.InsertAdjacentHTML:
+            target.insertAdjacentHTML(op.position, op.text);
+            break;
+        }
+      }
+    }
+  }
+
+  return {
+    decodeOperation,
+  };
+}

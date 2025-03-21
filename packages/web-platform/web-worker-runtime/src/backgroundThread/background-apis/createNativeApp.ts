@@ -115,11 +115,11 @@ export async function createNativeApp(config: {
         tt,
       );
       registerPublicComponentEventHandler(
-        uiThreadRpc,
+        mainThreadRpc,
         tt,
       );
       registerPublishEventHandler(
-        uiThreadRpc,
+        mainThreadRpc,
         tt,
       );
       registerGlobalExposureEventHandler(

@@ -3,7 +3,6 @@
 // LICENSE file in the root directory of this source tree.
 
 import {
-  type ElementOperation,
   type LynxLifecycleEvent,
   type LynxTemplate,
   type PageConfig,
@@ -13,14 +12,17 @@ import {
   type Cloneable,
   type CssInJsInfo,
   type BrowserConfig,
+  lynxUniqueIdAttribute,
+  type publishEventEndpoint,
+  type publicComponentEventEndpoint,
 } from '@lynx-js/web-constants';
 import { globalMuteableVars } from '@lynx-js/web-constants';
 import { createMainThreadLynx, type MainThreadLynx } from './MainThreadLynx.js';
 import { initializeElementCreatingFunction } from './elementAPI/elementCreating/elementCreatingFunctions.js';
 import * as attributeAndPropertyApis from './elementAPI/attributeAndProperty/attributeAndPropertyFunctions.js';
 import * as domTreeApis from './elementAPI/domTree/domTreeFunctions.js';
-import * as eventApis from './elementAPI/event/eventFunctions.js';
-import * as styleApis from './elementAPI/style/styleFunctions.js';
+import { createEventFunctions } from './elementAPI/event/eventFunctions.js';
+import { createStyleFunctions } from './elementAPI/style/styleFunctions.js';
 import {
   flattenStyleInfo,
   genCssContent,
@@ -28,18 +30,20 @@ import {
   transformToWebCss,
 } from './utils/processStyleInfo.js';
 import { createAttributeAndPropertyFunctionsWithContext } from './elementAPI/attributeAndProperty/createAttributeAndPropertyFunctionsWithContext.js';
+import type { ElementThreadElement } from './elementAPI/ElementThreadElement.js';
+import type { CreateCallReturnOf } from '../../web-worker-rpc/src/TypeUtils.js';
 
 export interface MainThreadRuntimeCallbacks {
   mainChunkReady: () => void;
   flushElementTree: (
-    operations: ElementOperation[],
     options: FlushElementTreeOptions,
-    styleContent: string | undefined,
     timingFlags: string[],
   ) => void;
   _ReportError: (error: Error, info?: unknown) => void;
   __OnLifecycleEvent: (lynxLifecycleEvents: LynxLifecycleEvent) => void;
   markTiming: (pipelineId: string, timingKey: string) => void;
+  publishEvent: CreateCallReturnOf<typeof publishEventEndpoint>;
+  publicComponentEvent: CreateCallReturnOf<typeof publicComponentEventEndpoint>;
 }
 
 export interface MainThreadConfig {
@@ -51,44 +55,62 @@ export interface MainThreadConfig {
   lepusCode: LynxTemplate['lepusCode'];
   browserConfig: BrowserConfig;
   tagMap: Record<string, string>;
+  docu: Pick<Document, 'append' | 'createElement'>;
 }
 
 export class MainThreadRuntime {
-  private isFp = true;
+  /**
+   * @private
+   */
+  _uniqueIdToElement: WeakRef<ElementThreadElement>[] = [];
+  /**
+   * @private
+   */
+  private _uniqueIdToStyleSheet: WeakRef<HTMLStyleElement>[] = [];
+  /**
+   * @private
+   */
+  private readonly _styleRoot: HTMLElement;
+  /**
+   * @private
+   */
+  _rootDom: HTMLElement;
 
   /**
    * @private
    */
   _timingFlags: string[] = [];
-
-  public operationsRef: {
-    operations: ElementOperation[];
-  } = {
-    operations: [],
-  };
   constructor(
-    private config: MainThreadConfig,
+    public config: MainThreadConfig,
   ) {
     this.__globalProps = config.globalProps;
     this.lynx = createMainThreadLynx(config, this);
     flattenStyleInfo(this.config.styleInfo);
     transformToWebCss(this.config.styleInfo);
-    const cssInJs: CssInJsInfo = this.config.pageConfig.enableCSSSelector
+    const cssInJsInfo: CssInJsInfo = this.config.pageConfig.enableCSSSelector
       ? {}
       : genCssInJsInfo(this.config.styleInfo);
+    this._styleRoot = this.config.docu.createElement('div');
+    this._rootDom = this.config.docu.createElement('div');
+    const cardStyleElement = this.config.docu.createElement('style');
+    cardStyleElement.insertAdjacentHTML(
+      'afterbegin',
+      genCssContent(this.config.styleInfo, this.config.pageConfig),
+    );
+    this._styleRoot.append(cardStyleElement);
+    this._rootDom.append(this._styleRoot);
+    this.config.docu.append(this._rootDom);
     Object.assign(
       this,
       createAttributeAndPropertyFunctionsWithContext(this),
       attributeAndPropertyApis,
       domTreeApis,
-      eventApis,
-      styleApis,
-      initializeElementCreatingFunction({
-        operationsRef: this.operationsRef,
-        pageConfig: config.pageConfig,
-        styleInfo: cssInJs,
-        tagMap: config.tagMap,
-      }),
+      createEventFunctions(this),
+      createStyleFunctions(
+        this,
+        cssInJsInfo,
+      ),
+      initializeElementCreatingFunction(this),
     );
     this.__LoadLepusChunk = (path) => {
       try {
@@ -120,6 +142,25 @@ export class MainThreadRuntime {
         },
       });
     }
+  }
+  /**
+   * @private
+   */
+  _getElementByUniqueId(uniqueId: number): HTMLElement | undefined {
+    return this._uniqueIdToElement[uniqueId]?.deref();
+  }
+  _updateCSSInJsStyle(uniqueId: number, newStyles: string) {
+    let currentElement = this._uniqueIdToStyleSheet[uniqueId]?.deref();
+    if (!currentElement) {
+      currentElement = this.config.docu.createElement(
+        'style',
+      ) as HTMLStyleElement;
+      this._uniqueIdToStyleSheet[uniqueId] = new WeakRef(currentElement);
+    }
+    currentElement.insertAdjacentHTML(
+      'afterbegin',
+      `[${lynxUniqueIdAttribute}="${uniqueId}"]{${newStyles}}`,
+    );
   }
 
   /**
@@ -153,22 +194,12 @@ export class MainThreadRuntime {
     _subTree: unknown,
     options: FlushElementTreeOptions,
   ) => {
-    const operations = this.operationsRef.operations;
     const timingFlags = this._timingFlags;
-    this.operationsRef.operations = [];
     this._timingFlags = [];
     this.config.callbacks.flushElementTree(
-      operations,
       options,
-      this.isFp
-        ? genCssContent(
-          this.config.styleInfo,
-          this.config.pageConfig,
-        )
-        : undefined,
       timingFlags,
     );
-    this.isFp = false;
   };
 
   updatePage?: (data: Cloneable, options?: Record<string, string>) => void;

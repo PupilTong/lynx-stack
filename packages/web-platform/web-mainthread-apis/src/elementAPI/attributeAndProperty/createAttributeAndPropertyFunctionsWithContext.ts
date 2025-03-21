@@ -10,7 +10,8 @@ export function createAttributeAndPropertyFunctionsWithContext(
     key: string,
     value: string | null | undefined,
   ): void {
-    element.setAttribute(key, value ?? null);
+    if (value) element.setAttribute(key, value);
+    else element.removeAttribute(key);
     if (key === __lynx_timing_flag && value) {
       runtime._timingFlags.push(value);
     }

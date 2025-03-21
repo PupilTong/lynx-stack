@@ -2,55 +2,26 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 import {
-  type PageConfig,
-  type ElementOperation,
   cssIdAttribute,
-  type CssInJsInfo,
+  lynxUniqueIdAttribute,
   parentComponentUniqueIdAttribute,
   lynxTagAttribute,
+  lynxDefaultDisplayLinearAttribute,
 } from '@lynx-js/web-constants';
 import { __UpdateComponentID } from '../attributeAndProperty/attributeAndPropertyFunctions.js';
 import {
   type ComponentAtIndexCallback,
+  type ElementThreadElement,
   type EnqueueComponentCallback,
-  ListElement,
-  ElementThreadElement,
+  runtimeInfo,
 } from '../ElementThreadElement.js';
-import { __SetCSSId } from '../style/styleFunctions.js';
-import { createOffscreenDocument } from '../createOffscreenDocument.js';
-
-export interface initializeElementCreatingFunctionConfig {
-  operationsRef: {
-    operations: ElementOperation[];
-  };
-  pageConfig: PageConfig;
-  styleInfo: CssInJsInfo;
-  tagMap: Record<string, string>;
-}
+import type { MainThreadRuntime } from '../../MainThreadRuntime.js';
+import type { createStyleFunctions } from '../style/styleFunctions.js';
 
 export function initializeElementCreatingFunction(
-  config: initializeElementCreatingFunctionConfig,
+  runtime: MainThreadRuntime,
 ) {
-  const { operationsRef, pageConfig, styleInfo, tagMap } = config;
-  const document = createOffscreenDocument({
-    pageConfig,
-    operationsRef,
-    styleInfo,
-  });
-  function createLynxElement(
-    tag: Exclude<string, 'list'>,
-    parentComponentUniqueId: number,
-    cssId?: number,
-    componentId?: string,
-    info?: Record<string, any> | null | undefined,
-  ): ElementThreadElement;
-  function createLynxElement(
-    tag: 'list',
-    parentComponentUniqueId: number,
-    cssId?: number,
-    componentId?: string,
-    info?: Record<string, any> | null | undefined,
-  ): ListElement;
+  let uniqueIdInc = 1;
   function createLynxElement(
     tag: string,
     parentComponentUniqueId: number,
@@ -59,17 +30,31 @@ export function initializeElementCreatingFunction(
     // @ts-expect-error
     info?: Record<string, any> | null | undefined,
   ) {
-    const htmlTag = tagMap[tag] ?? tag;
-    const element = document.createElement(htmlTag);
+    // @ts-expect-error
+    const __SetCSSId = runtime.__SetCSSId as ReturnType<
+      typeof createStyleFunctions
+    >['__SetCSSId'];
+    const htmlTag = runtime.config.tagMap[tag] ?? tag;
+    const element = runtime.config.docu.createElement(
+      htmlTag,
+    ) as ElementThreadElement;
     element.setAttribute(lynxTagAttribute, tag);
-    // element.parentComponentUniqueId = parentComponentUniqueId;
+    const uniqueId = uniqueIdInc++;
+    element[runtimeInfo] = {
+      uniqueId,
+      componentConfig: {},
+      lynxDataset: {},
+      eventHandlerMap: {},
+    };
+    runtime._uniqueIdToElement[uniqueId] = new WeakRef(element);
+    element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
     element.setAttribute(
       parentComponentUniqueIdAttribute,
       parentComponentUniqueId.toString(),
     );
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
-      const parentComponent = ElementThreadElement.getElementByUniqueId(
+      const parentComponent = runtime._getElementByUniqueId(
         parentComponentUniqueId,
       );
       const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
@@ -129,8 +114,12 @@ export function initializeElementCreatingFunction(
     page.setAttribute('part', 'page');
     page.setAttribute(
       parentComponentUniqueIdAttribute,
-      page.uniqueId.toString(),
+      page[runtimeInfo].uniqueId.toString(),
     );
+    if (runtime.config.pageConfig.defaultDisplayLinear === false) {
+      page.setAttribute(lynxDefaultDisplayLinearAttribute, 'false');
+    }
+    runtime._rootDom.append(page);
     return page;
   }
 
@@ -169,17 +158,26 @@ export function initializeElementCreatingFunction(
     componentAtIndex: ComponentAtIndexCallback,
     enqueueComponent: EnqueueComponentCallback,
     info?: any,
-  ): ListElement {
+  ): ElementThreadElement {
     const element = createLynxElement(
       'list',
       parentComponentUniqueId,
       undefined,
       undefined,
       info,
-    ) as ListElement;
-    element.componentAtIndex = componentAtIndex;
-    element.enqueueComponent = enqueueComponent;
+    ) as ElementThreadElement;
+    element[runtimeInfo].componentAtIndex = componentAtIndex;
+    element[runtimeInfo].enqueueComponent = enqueueComponent;
     return element;
+  }
+  function __SwapElement(
+    childA: ElementThreadElement,
+    childB: ElementThreadElement,
+  ): void {
+    const temp = runtime.config.docu.createElement('div');
+    childA.replaceWith(temp);
+    childB.replaceWith(childA);
+    temp.replaceWith(childB);
   }
 
   return {
@@ -193,5 +191,6 @@ export function initializeElementCreatingFunction(
     __CreateElement,
     __CreateWrapperElement,
     __CreateList,
+    __SwapElement,
   };
 }

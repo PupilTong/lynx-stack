@@ -2,13 +2,13 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import type { ElementThreadElement } from '../ElementThreadElement.js';
+import { type ElementThreadElement } from '../ElementThreadElement.js';
 
 export function __AppendElement(
   parent: ElementThreadElement,
   child: ElementThreadElement,
-) {
-  parent.appendChild([child]);
+): void {
+  parent.append(child);
 }
 
 export function __ElementIsEqual(
@@ -21,19 +21,19 @@ export function __ElementIsEqual(
 export function __FirstElement(
   element: ElementThreadElement,
 ): ElementThreadElement | undefined {
-  return element.firstElementChild;
+  return element.firstElementChild as ElementThreadElement;
 }
 
 export function __GetChildren(
   element: ElementThreadElement,
 ): ElementThreadElement[] {
-  return element.children;
+  return [...(element.children as unknown as ElementThreadElement[])];
 }
 
 export function __GetParent(
   element: ElementThreadElement,
 ): ElementThreadElement | undefined {
-  return element.parent;
+  return element.parentElement as ElementThreadElement | undefined;
 }
 
 export function __InsertElementBefore(
@@ -41,19 +41,19 @@ export function __InsertElementBefore(
   child: ElementThreadElement,
   ref: ElementThreadElement | null,
 ): ElementThreadElement {
-  return parent.insertBefore(child, ref);
+  return parent.insertBefore(child, ref) as ElementThreadElement;
 }
 
 export function __LastElement(
   element: ElementThreadElement,
 ): ElementThreadElement | undefined {
-  return element.lastElementChild;
+  return element.lastElementChild as ElementThreadElement | undefined;
 }
 
 export function __NextElement(
   element: ElementThreadElement,
 ): ElementThreadElement | undefined {
-  return element.nextElementSibling;
+  return element.nextElementSibling as ElementThreadElement | undefined;
 }
 
 export function __RemoveElement(
@@ -68,7 +68,7 @@ export function __ReplaceElement(
   newElement: ElementThreadElement,
   oldElement: ElementThreadElement,
 ) {
-  oldElement.replaceWithElements([newElement]);
+  oldElement.replaceWith(newElement);
 }
 
 export function __ReplaceElements(
@@ -80,20 +80,13 @@ export function __ReplaceElements(
   if (
     !oldChildren || (Array.isArray(oldChildren) && oldChildren?.length === 0)
   ) {
-    parent.appendChild(newChildren);
+    parent.append(...newChildren);
   } else {
     oldChildren = Array.isArray(oldChildren) ? oldChildren : [oldChildren];
     for (let ii = 1; ii < oldChildren.length; ii++) {
       __RemoveElement(parent, oldChildren[ii]!);
     }
     const firstOldChildren = oldChildren[0]!;
-    firstOldChildren.replaceWithElements(newChildren);
+    firstOldChildren.replaceWith(...newChildren);
   }
-}
-
-export function __SwapElement(
-  childA: ElementThreadElement,
-  childB: ElementThreadElement,
-): void {
-  childA.swapWith(childB);
 }

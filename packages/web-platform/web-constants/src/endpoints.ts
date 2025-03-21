@@ -11,14 +11,13 @@ import type { Cloneable, CloneableObject } from './types/Cloneable.js';
 import type { MainThreadStartConfigs } from './types/MainThreadStartConfigs.js';
 import type { LynxLifecycleEvent } from './types/LynxLifecycleEvent.js';
 import type {
-  ElementOperation,
   FlushElementTreeOptions,
-} from './types/ElementOperation.js';
-import type { PageConfig } from './types/PageConfig.js';
+} from './types/FlushElementTreeOptions.js';
 import type { IdentifierType, InvokeCallbackRes } from './types/NativeApp.js';
 import type { LynxTemplate } from './types/LynxModule.js';
 import type { NapiModulesMap } from './types/NapiModules.js';
 import type { NativeModulesMap } from './types/NativeModules.js';
+import type { ElementOperation } from './types/ElementOperation.js';
 
 export const postExposureEndpoint = createRpcEndpoint<
   [{ exposures: ExposureWorkerEvent[]; disExposures: ExposureWorkerEvent[] }],
@@ -38,11 +37,6 @@ export const publishEventEndpoint = createRpcEndpoint<
   [string, LynxCrossThreadEvent],
   void
 >('publishEvent', false, false);
-
-export const postMainThreadEvent = createRpcEndpoint<
-  [LynxCrossThreadEvent],
-  void
->('postMainThreadEvent', false, false);
 
 export const switchExposureService = createRpcEndpoint<
   [boolean, boolean],
@@ -120,18 +114,24 @@ export const reportErrorEndpoint = createRpcEndpoint<
 
 export const flushElementTreeEndpoint = createRpcEndpoint<
   [
-    operations: ElementOperation[],
     FlushElementTreeOptions,
-    styleContent: string | undefined,
     timingFlags: string[],
+    operations: ElementOperation[],
   ],
   void
->('flushElementTree', false, true);
+>('flushElementTree', false, false);
+
+export const offscreenDocumentOnEvent = createRpcEndpoint<
+  [
+    eventType: string,
+    targetUniqueId: number,
+    bubbles: boolean,
+  ],
+  void
+>('offscreenDocumentOnEvent', false, false);
 
 export const mainThreadChunkReadyEndpoint = createRpcEndpoint<
-  [{
-    pageConfig: PageConfig;
-  }],
+  [],
   void
 >('mainThreadChunkReady', false, false);
 
