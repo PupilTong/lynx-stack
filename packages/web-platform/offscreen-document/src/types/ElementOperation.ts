@@ -59,7 +59,7 @@ export interface InsertBeforeOperation extends ElementOperationBase {
    * child uniqueId
    */
   cid: number;
-  ref?: number;
+  ref?: number | undefined;
 }
 
 export interface ReplaceOperation extends ElementOperationBase {
