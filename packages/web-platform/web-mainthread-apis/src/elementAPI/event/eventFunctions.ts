@@ -11,9 +11,10 @@ import {
   type LynxCrossThreadEvent,
   type LynxEventType,
 } from '@lynx-js/web-constants';
-import { createCrossThreadEvent } from '../../utils/createCrossThreadEvent.js';
+import { createCrossThreadEvent } from './createCrossThreadEvent.js';
 import {
   elementToRuntimeInfoMap,
+  getElementByUniqueId,
   type MainThreadRuntime,
 } from '../../MainThreadRuntime.js';
 
@@ -32,11 +33,11 @@ export function createEventFunctions(runtime: MainThreadRuntime) {
       : runtimeInfo.eventHandlerMap[lynxEventName]?.bind
         ?.handler;
     if (hname) {
-      const crossThreadEvent = createCrossThreadEvent(event);
+      const crossThreadEvent = createCrossThreadEvent(runtime, event);
       const parentComponentUniqueId = currentTarget.getAttribute(
         parentComponentUniqueIdAttribute,
       )!;
-      const parentComponent = runtime._getElementByUniqueId(
+      const parentComponent = runtime[getElementByUniqueId](
         Number(parentComponentUniqueId),
       )!;
       const componentId =

@@ -11,6 +11,7 @@ import {
 } from './transformInlineStyle.js';
 import {
   elementToRuntimeInfoMap,
+  updateCSSInJsStyle,
   type MainThreadRuntime,
 } from '../../MainThreadRuntime.js';
 
@@ -31,7 +32,7 @@ export function createStyleFunctions(
         cssInJsInfo,
         element.getAttribute(cssIdAttribute),
       );
-      runtime._updateCSSInJsStyle(
+      runtime[updateCSSInJsStyle](
         runtime[elementToRuntimeInfoMap].get(element)!.uniqueId,
         newStyleStr,
       );
@@ -50,7 +51,7 @@ export function createStyleFunctions(
         cssInJsInfo,
         element.getAttribute(cssIdAttribute),
       );
-      runtime._updateCSSInJsStyle(
+      runtime[updateCSSInJsStyle](
         runtime[elementToRuntimeInfoMap].get(element)!.uniqueId,
         newStyleStr ?? '',
       );

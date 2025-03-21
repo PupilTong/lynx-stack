@@ -57,16 +57,21 @@ export interface MainThreadConfig {
 }
 
 export const elementToRuntimeInfoMap = Symbol('elementToRuntimeInfoMap');
+export const getElementByUniqueId = Symbol('getElementByUniqueId');
+export const updateCSSInJsStyle = Symbol('updateCSSInJsStyle');
+
+const _lynxUniqueIdToElement = Symbol('_lynxUniqueIdToElement');
+const _uniqueIdToStyleSheet = Symbol('_uniqueIdToStyleSheet');
 
 export class MainThreadRuntime {
   /**
    * @private
    */
-  _uniqueIdToElement: WeakRef<HTMLElement>[] = [];
+  [_lynxUniqueIdToElement]: WeakRef<HTMLElement>[] = [];
   /**
    * @private
    */
-  private _uniqueIdToStyleSheet: WeakRef<HTMLStyleElement>[] = [];
+  private [_uniqueIdToStyleSheet]: WeakRef<HTMLStyleElement>[] = [];
   /**
    * @private
    */
@@ -151,16 +156,17 @@ export class MainThreadRuntime {
   /**
    * @private
    */
-  _getElementByUniqueId(uniqueId: number): HTMLElement | undefined {
-    return this._uniqueIdToElement[uniqueId]?.deref();
+  [getElementByUniqueId](uniqueId: number): HTMLElement | undefined {
+    return this[_lynxUniqueIdToElement][uniqueId]?.deref();
   }
-  _updateCSSInJsStyle(uniqueId: number, newStyles: string) {
-    let currentElement = this._uniqueIdToStyleSheet[uniqueId]?.deref();
+
+  [updateCSSInJsStyle](uniqueId: number, newStyles: string) {
+    let currentElement = this[_uniqueIdToStyleSheet][uniqueId]?.deref();
     if (!currentElement) {
       currentElement = this.config.docu.createElement(
         'style',
       ) as HTMLStyleElement;
-      this._uniqueIdToStyleSheet[uniqueId] = new WeakRef(currentElement);
+      this[_uniqueIdToStyleSheet][uniqueId] = new WeakRef(currentElement);
     }
     currentElement.insertAdjacentHTML(
       'afterbegin',
