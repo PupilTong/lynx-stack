@@ -13,7 +13,7 @@ type CompareableElementJson = {
   children: CompareableElementJson[];
   parentUid?: number;
 };
-
+let runtime: MainThreadRuntime;
 const uniqueIdToElement: WeakRef<HTMLElement & RuntimePropertyOnElement>[] = [];
 
 let rootDom: HTMLElement;
@@ -21,10 +21,18 @@ let rootDom: HTMLElement;
 function serializeElementThreadElement(
   element: ElementThreadElement,
 ): CompareableElementJson {
+  // @ts-expect-error
+  const parent = runtime.__GetParent(element);
+  // @ts-expect-error
+  const parentUid = parent ? runtime.__GetElementUniqueID(parent) : undefined;
+  // @ts-expect-error
+  const children = runtime.__GetChildren(element).map(e =>
+    serializeElementThreadElement(e)
+  );
   return {
     tag: element.tag,
-    children: element.children.map(e => serializeElementThreadElement(e)),
-    parentUid: element.parent?.uniqueId,
+    children,
+    parentUid,
   };
 }
 
@@ -65,7 +73,7 @@ function getElementThreadElements() {
 }
 
 function initializeMainThreadTest() {
-  const runtime = new MainThreadRuntime({
+  runtime = new MainThreadRuntime({
     tagMap: {
       'page': 'div',
       'view': 'x-view',
