@@ -102,8 +102,8 @@ export function initOffscreenDocument(options: {
               target.style.removeProperty(op.property);
             }
             break;
-          case OperationType.InsertAdjacentHTML:
-            target.insertAdjacentHTML(op.position, op.text);
+          case OperationType.SetInnerHTML:
+            target.innerHTML = op.text;
             break;
         }
       }

@@ -217,13 +217,9 @@ export class OffscreenElement extends EventTarget {
     return child;
   }
 
-  insertAdjacentHTML(
-    position: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
-    text: string,
-  ) {
+  set innerHTML(text: string) {
     this[ancestorDocument][operations].push({
-      type: OperationType.InsertAdjacentHTML,
-      position,
+      type: OperationType.SetInnerHTML,
       text,
       uid: this[uniqueId],
     });

@@ -14,7 +14,7 @@ export const OperationType = {
   RemoveChild: 9,
   StyleDeclarationSetProperty: 10,
   StyleDeclarationRemoveProperty: 11,
-  InsertAdjacentHTML: 12,
+  SetInnerHTML: 12,
 } as const;
 
 type IOperationType = typeof OperationType;
@@ -99,9 +99,8 @@ export interface StyleDeclarationRemovePropertyOperation
   property: string;
 }
 
-export interface InsertAdjacentHTMLOperation extends ElementOperationBase {
-  type: IOperationType['InsertAdjacentHTML'];
-  position: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend';
+export interface SetInnerHTMLOperation extends ElementOperationBase {
+  type: IOperationType['SetInnerHTML'];
   text: string;
 }
 
@@ -117,4 +116,4 @@ export type ElementOperation =
   | RemoveChildOperation
   | StyleDeclarationSetPropertyOperation
   | StyleDeclarationRemovePropertyOperation
-  | InsertAdjacentHTMLOperation;
+  | SetInnerHTMLOperation;
