@@ -10,15 +10,13 @@ import type {
 import type { Cloneable, CloneableObject } from './types/Cloneable.js';
 import type { MainThreadStartConfigs } from './types/MainThreadStartConfigs.js';
 import type { LynxLifecycleEvent } from './types/LynxLifecycleEvent.js';
-import type {
-  ElementOperation,
-  FlushElementTreeOptions,
-} from './types/ElementOperation.js';
 import type { PageConfig } from './types/PageConfig.js';
 import type { IdentifierType, InvokeCallbackRes } from './types/NativeApp.js';
 import type { LynxTemplate } from './types/LynxModule.js';
 import type { NapiModulesMap } from './types/NapiModules.js';
 import type { NativeModulesMap } from './types/NativeModules.js';
+import type { ElementOperation } from '@lynx-js/offscreen-document';
+import type { FlushElementTreeOptions } from './types/FlushElementTreeOptions.js';
 
 export const postExposureEndpoint = createRpcEndpoint<
   [{ exposures: ExposureWorkerEvent[]; disExposures: ExposureWorkerEvent[] }],
