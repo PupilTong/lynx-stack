@@ -16,7 +16,6 @@ import {
 import { Rpc } from '@lynx-js/web-worker-rpc';
 import { MainThreadRuntime } from '@lynx-js/web-mainthread-apis';
 import { registerCallLepusMethodHandler } from './crossThreadHandlers/registerCallLepusMethodHandler.js';
-import { registerPostMainThreadEventHandler } from './crossThreadHandlers/registerPostMainThreadEventHandler.js';
 import { registerGetCustomSectionHandler } from './crossThreadHandlers/registerGetCustomSectionHandler.js';
 import { createMarkTimingInternal } from './crossThreadHandlers/createMainthreadMarkTimingInternal.js';
 import { registerUpdateDataHandler } from './crossThreadHandlers/registerUpdateDataHandler.js';
@@ -92,9 +91,6 @@ export function startMainThread(
             registerCallLepusMethodHandler(
               backgroundThreadRpc,
               runtime,
-            );
-            registerPostMainThreadEventHandler(
-              uiThreadRpc,
             );
             registerGetCustomSectionHandler(
               backgroundThreadRpc,

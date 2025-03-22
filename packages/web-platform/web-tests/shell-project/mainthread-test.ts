@@ -6,7 +6,6 @@ import { MainThreadRuntime } from '@lynx-js/web-mainthread-apis';
 import { ElementThreadElement } from '@lynx-js/web-mainthread-apis/dist/elementAPI/ElementThreadElement.js';
 import { decodeElementOperation } from '@lynx-js/web-core/dist/uiThread/decodeElementOperation';
 import type { RuntimePropertyOnElement } from '@lynx-js/web-core/dist/types/RuntimePropertyOnElement';
-import { lynxRuntimeValue } from '@lynx-js/web-core';
 
 type CompareableElementJson = {
   tag: string;
@@ -106,10 +105,6 @@ function initializeMainThreadTest() {
               const element = document.createElement(tag) as
                 & HTMLDivElement
                 & RuntimePropertyOnElement;
-              element[lynxRuntimeValue] = {
-                dataset: {},
-                eventHandler: {},
-              };
               return element;
             },
             createStyleRuleImpl: function(

@@ -37,10 +37,14 @@ export const publishEventEndpoint = createRpcEndpoint<
   void
 >('publishEvent', false, false);
 
-export const postMainThreadEvent = createRpcEndpoint<
-  [LynxCrossThreadEvent],
+export const postOffscreenEventtEndpoint = createRpcEndpoint<
+  [
+    eventType: string,
+    targetUniqueId: number,
+    bubbles: boolean,
+  ],
   void
->('postMainThreadEvent', false, false);
+>('postOffscreenEventtEndpoint', false, false);
 
 export const switchExposureService = createRpcEndpoint<
   [boolean, boolean],
