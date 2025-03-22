@@ -15,6 +15,8 @@ import {
 } from '../ElementThreadElement.js';
 import {
   elementToRuntimeInfoMap,
+  getElementByUniqueId,
+  lynxUniqueIdToElement,
   type MainThreadRuntime,
 } from '../../MainThreadRuntime.js';
 import type { createStyleFunctions } from '../style/styleFunctions.js';
@@ -48,7 +50,7 @@ export function initializeElementCreatingFunction(
       eventHandlerMap: {},
     };
     runtime[elementToRuntimeInfoMap].set(element, runtimeInfo);
-    runtime._uniqueIdToElement[uniqueId] = new WeakRef(element);
+    runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
     element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
     element.setAttribute(
       parentComponentUniqueIdAttribute,
@@ -56,7 +58,7 @@ export function initializeElementCreatingFunction(
     );
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
-      const parentComponent = runtime._getElementByUniqueId(
+      const parentComponent = runtime[getElementByUniqueId](
         parentComponentUniqueId,
       );
       const parentCssId = parentComponent?.getAttribute(cssIdAttribute);

@@ -36,7 +36,10 @@ import type { LynxRuntimeInfo } from './elementAPI/ElementThreadElement.js';
 
 export interface MainThreadRuntimeCallbacks {
   mainChunkReady: () => void;
-  flushElementTree: RpcCallType<typeof flushElementTreeEndpoint>;
+  flushElementTree: (
+    options: FlushElementTreeOptions,
+    timingFlags: string[],
+  ) => void;
   _ReportError: RpcCallType<typeof reportErrorEndpoint>;
   __OnLifecycleEvent: RpcCallType<typeof onLifecycleEventEndpoint>;
   markTiming: (pipelineId: string, timingKey: string) => void;
@@ -53,25 +56,27 @@ export interface MainThreadConfig {
   lepusCode: LynxTemplate['lepusCode'];
   browserConfig: BrowserConfig;
   tagMap: Record<string, string>;
-  docu: Pick<Document, 'append' | 'createElement'>;
+  docu: Pick<Document, 'append' | 'createElement'> & {
+    commit?: () => void;
+  };
 }
 
 export const elementToRuntimeInfoMap = Symbol('elementToRuntimeInfoMap');
 export const getElementByUniqueId = Symbol('getElementByUniqueId');
 export const updateCSSInJsStyle = Symbol('updateCSSInJsStyle');
+export const lynxUniqueIdToElement = Symbol('lynxUniqueIdToElement');
 
-const _lynxUniqueIdToElement = Symbol('_lynxUniqueIdToElement');
-const _uniqueIdToStyleSheet = Symbol('_uniqueIdToStyleSheet');
+const _lynxUniqueIdToStyleSheet = Symbol('_lynxUniqueIdToStyleSheet');
 
 export class MainThreadRuntime {
   /**
    * @private
    */
-  [_lynxUniqueIdToElement]: WeakRef<HTMLElement>[] = [];
+  [lynxUniqueIdToElement]: WeakRef<HTMLElement>[] = [];
   /**
    * @private
    */
-  private [_uniqueIdToStyleSheet]: WeakRef<HTMLStyleElement>[] = [];
+  private [_lynxUniqueIdToStyleSheet]: WeakRef<HTMLStyleElement>[] = [];
   /**
    * @private
    */
@@ -157,16 +162,16 @@ export class MainThreadRuntime {
    * @private
    */
   [getElementByUniqueId](uniqueId: number): HTMLElement | undefined {
-    return this[_lynxUniqueIdToElement][uniqueId]?.deref();
+    return this[lynxUniqueIdToElement][uniqueId]?.deref();
   }
 
   [updateCSSInJsStyle](uniqueId: number, newStyles: string) {
-    let currentElement = this[_uniqueIdToStyleSheet][uniqueId]?.deref();
+    let currentElement = this[_lynxUniqueIdToStyleSheet][uniqueId]?.deref();
     if (!currentElement) {
       currentElement = this.config.docu.createElement(
         'style',
       ) as HTMLStyleElement;
-      this[_uniqueIdToStyleSheet][uniqueId] = new WeakRef(currentElement);
+      this[_lynxUniqueIdToStyleSheet][uniqueId] = new WeakRef(currentElement);
     }
     currentElement.insertAdjacentHTML(
       'afterbegin',
@@ -207,6 +212,7 @@ export class MainThreadRuntime {
   ) => {
     const timingFlags = this._timingFlags;
     this._timingFlags = [];
+    this.config.callbacks.flushElementTree(options, timingFlags);
   };
 
   updatePage?: (data: Cloneable, options?: Record<string, string>) => void;

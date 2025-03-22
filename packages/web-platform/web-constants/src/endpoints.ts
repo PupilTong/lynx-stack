@@ -120,7 +120,6 @@ export const flushElementTreeEndpoint = createRpcEndpoint<
   [
     operations: ElementOperation[],
     FlushElementTreeOptions,
-    styleContent: string | undefined,
     timingFlags: string[],
   ],
   void
