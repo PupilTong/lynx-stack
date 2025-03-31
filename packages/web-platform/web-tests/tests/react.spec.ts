@@ -42,8 +42,20 @@ const expectNoText = async (page: Page, text: string) => {
   await expect(hasText).toBe(false);
 };
 
-const goto = async (page: Page, testname: string, hasDir?: boolean) => {
-  await page.goto(`/?casename=${testname}${hasDir ? '&hasdir=true' : ''}`, {
+const goto = async (
+  page: Page,
+  testname: string,
+  testname2?: string,
+  hasDir?: boolean,
+) => {
+  let url = `/?casename=${testname}`;
+  if (hasDir) {
+    url += '&hasdir=true';
+  }
+  if (testname2) {
+    url += `&casename2=${testname2}`;
+  }
+  await page.goto(url, {
     waitUntil: 'load',
   });
   await page.evaluate(() => document.fonts.ready);
@@ -536,9 +548,9 @@ test.describe('reactlynx3 tests', () => {
           await goto(page, title);
           await diffScreenShot(page, module, title, 'initial');
           await page.evaluate(() => {
-            // @ts-expect-error
             document.querySelector('lynx-view')!.shadowRoot!.querySelector(
               '#x',
+              // @ts-expect-error
             )!.scrollTo({ offset: 200 });
           });
           await wait(200);
@@ -550,9 +562,9 @@ test.describe('reactlynx3 tests', () => {
           );
           await wait(200);
           await page.evaluate(() => {
-            // @ts-expect-error
             document.querySelector('lynx-view')!.shadowRoot!.querySelector(
               '#x',
+              // @ts-expect-error
             )!.scrollTo({ offset: 400 });
           });
           await diffScreenShot(page, module, title, 'scroll-200-green');
@@ -571,8 +583,8 @@ test.describe('reactlynx3 tests', () => {
         });
         await wait(100);
         await page.evaluate(() => {
-          // @ts-expect-error
           document.querySelector('lynx-view')!.shadowRoot!.querySelector('#x')!
+            // @ts-expect-error
             .scrollTo({ offset: 600 });
         });
         await wait(100);
@@ -581,8 +593,8 @@ test.describe('reactlynx3 tests', () => {
         });
         await wait(100);
         await page.evaluate(() => {
-          // @ts-expect-error
           document.querySelector('lynx-view')!.shadowRoot!.querySelector('#x')!
+            // @ts-expect-error
             .scrollTo({ offset: 0 });
         });
         await wait(100);
@@ -591,8 +603,8 @@ test.describe('reactlynx3 tests', () => {
         });
         await wait(100);
         await page.evaluate(() => {
-          // @ts-expect-error
           document.querySelector('lynx-view')!.shadowRoot!.querySelector('#y')!
+            // @ts-expect-error
             .scrollTo({ offset: 50 });
         });
         await wait(100);
@@ -601,8 +613,8 @@ test.describe('reactlynx3 tests', () => {
         });
         await wait(100);
         await page.evaluate(() => {
-          // @ts-expect-error
           document.querySelector('lynx-view')!.shadowRoot!.querySelector('#y')!
+            // @ts-expect-error
             .scrollTo({ offset: 0 });
         });
         await wait(100);
@@ -645,6 +657,24 @@ test.describe('reactlynx3 tests', () => {
         await diffScreenShot(page, module, title, 'all-green', {
           fullPage: true,
         });
+      });
+
+      test('api-setSharedData', async ({ page }, { title }) => {
+        await goto(page, title);
+        await wait(100);
+        await expect(page.locator('#target')).toHaveCSS(
+          'background-color',
+          'rgb(0, 128, 0)',
+        ); // green
+      });
+
+      test('api-shared-context', async ({ page }, { title }) => {
+        await goto(page, 'api-setSharedData', 'api-getSharedData');
+        await wait(1000);
+        await expect(page.locator('#lynxview2').locator('#target')).toHaveCSS(
+          'background-color',
+          'rgb(0, 128, 0)',
+        ); // green
       });
 
       test(
@@ -961,7 +991,7 @@ test.describe('reactlynx3 tests', () => {
     test(
       'config-splitchunk-single-vendor',
       async ({ page }, { title }) => {
-        await goto(page, title, true);
+        await goto(page, title, undefined, true);
         await wait(1500);
         const target = page.locator('#target');
         await expect(target).toHaveCSS('background-color', 'rgb(0, 128, 0)'); // green
@@ -970,7 +1000,7 @@ test.describe('reactlynx3 tests', () => {
     test(
       'config-splitchunk-split-by-experience',
       async ({ page }, { title }) => {
-        await goto(page, title, true);
+        await goto(page, title, undefined, true);
         await wait(1500);
         const target = page.locator('#target');
         await expect(target).toHaveCSS('background-color', 'rgb(0, 128, 0)'); // green
@@ -979,7 +1009,7 @@ test.describe('reactlynx3 tests', () => {
     test(
       'config-splitchunk-split-by-module',
       async ({ page }, { title }) => {
-        await goto(page, title, true);
+        await goto(page, title, undefined, true);
         await wait(1500);
         const target = page.locator('#target');
         await expect(target).toHaveCSS('background-color', 'rgb(0, 128, 0)'); // green
@@ -987,7 +1017,7 @@ test.describe('reactlynx3 tests', () => {
     );
 
     test('config-mode-dev-with-all-in-one', async ({ page }, { title }) => {
-      await goto(page, title, true);
+      await goto(page, title, undefined, true);
       await wait(100);
       const target = page.locator('#target');
       await target.click();

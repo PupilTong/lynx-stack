@@ -13,13 +13,13 @@ import { createTimingSystem } from './createTimingSystem.js';
 const lynxCore = import(
   /* webpackMode: "eager" */ '@lynx-js/lynx-core/web'
 );
-
+let cnt = 1;
 export function startBackgroundThread(
   uiThreadPort: MessagePort,
   mainThreadPort: MessagePort,
 ): void {
   const uiThreadRpc = new Rpc(uiThreadPort, 'bg-to-ui');
-  const mainThreadRpc = new Rpc(mainThreadPort, 'bg-to-main');
+  const mainThreadRpc = new Rpc(mainThreadPort, 'bg-to-main' + cnt++);
   const timingSystem = createTimingSystem(mainThreadRpc, uiThreadRpc);
   timingSystem.markTimingInternal('load_core_start');
   mainThreadRpc.registerHandler(

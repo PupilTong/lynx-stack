@@ -31,6 +31,7 @@ export function startUIThread(
   templateUrl: string,
   configs: Omit<MainThreadStartConfigs, 'template'>,
   shadowRoot: ShadowRoot,
+  backgroundContextId: number | undefined,
   callbacks: {
     nativeModulesCall: NativeModulesCall;
     napiModulesCall: NapiModulesCall;
@@ -43,7 +44,7 @@ export function startUIThread(
     mainThreadRpc,
     backgroundRpc,
     terminateWorkers,
-  } = bootWorkers();
+  } = bootWorkers(backgroundContextId);
   const sendGlobalEvent = backgroundRpc.createCall(sendGlobalEventEndpoint);
   const uiThreadFpReady = backgroundRpc.createCall(uiThreadFpReadyEndpoint);
   const mainThreadStart = mainThreadRpc.createCall(mainThreadStartEndpoint);
