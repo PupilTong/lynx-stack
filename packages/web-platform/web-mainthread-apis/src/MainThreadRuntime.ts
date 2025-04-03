@@ -167,7 +167,9 @@ export class MainThreadRuntime {
         },
         set: (v: any) => {
           this.__lynxGlobalBindingValues[nm] = v;
-          this._updateVars?.();
+          for (const handler of this.__varsUpdateHandlers) {
+            handler();
+          }
         },
       });
     }
@@ -238,5 +240,8 @@ export class MainThreadRuntime {
 
   updatePage?: (data: Cloneable, options?: Record<string, string>) => void;
 
-  _updateVars?: () => void;
+  private __varsUpdateHandlers: (() => void)[] = [];
+  set _updateVars(handler: () => void) {
+    this.__varsUpdateHandlers.push(handler);
+  }
 }
