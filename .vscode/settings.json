@@ -4,6 +4,13 @@
     "renovate.json": "jsonc",
     "*.mdx": "mdx",
     "*.snap.txt": "markdown",
+    "node.h": "c",
+    "refcount.h": "c",
+    "stddef.h": "c",
+    "nodelist.h": "c",
+    "main.h": "c",
+    "growablepointerarray.h": "c",
+    "linkedlist.h": "c"
   },
   "[javascript]": {
     "editor.defaultFormatter": "dprint.dprint",
