@@ -5,14 +5,12 @@
 int main() {
   init();
   char buffer[65536];
-  RefCount* root = createElement("div");
-  incRefCount(root);
+  Element* root = create_element("div");
   for(int ii=0; ii<1000; ii++) {
-    RefCount* child = createElement("div");
-    incRefCount(child);
+    Element* child = create_element("div");
     append(root, &child, 1);
   }
-  getInnerHTML(root, buffer, sizeof(buffer));
+  get_inner_HTML(root, buffer, sizeof(buffer));
   printf("Hello, World!\n %s", buffer);
   return 0;
 }

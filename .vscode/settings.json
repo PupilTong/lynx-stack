@@ -10,7 +10,20 @@
     "nodelist.h": "c",
     "main.h": "c",
     "growablepointerarray.h": "c",
-    "linkedlist.h": "c"
+    "linkedlist.h": "c",
+    "utils.h": "c",
+    "cstdlib": "c",
+    "stdlib.h": "c",
+    "arraylist.h": "c",
+    "assert.h": "c",
+    "compare": "c",
+    "stdint.h": "c",
+    "cstdint": "c",
+    "array_list.h": "c",
+    "element.h": "c",
+    "emscripten.h": "c",
+    "stdio.h": "c",
+    "wasm.h": "c"
   },
   "[javascript]": {
     "editor.defaultFormatter": "dprint.dprint",
@@ -43,4 +56,5 @@
   "typescript.preferences.importModuleSpecifier": "relative",
   "typescript.preferences.preferTypeOnlyAutoImports": true,
   "typescript.preferences.importModuleSpecifierEnding": "js",
+  "cmake.sourceDirectory": "/home/haoyang/lynx/lynx-stack/packages/web-platform/web-core-server",
 }

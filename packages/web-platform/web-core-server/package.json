@@ -9,6 +9,9 @@
     "url": "https://github.com/lynx-family/lynx-stack.git",
     "directory": "packages/web-platform/web-core-server"
   },
+  "scripts": {
+    "build": "cmake-js compile && emcc -O3 -Wno-unused-value clang/wasm.c clang/core/*.c -o dist/offscreen-dom-wasm.js -sINITIAL_HEAP=1024MB -sSTACK_SIZE=512MB -sINITIAL_MEMORY=2048MB --bind -sMODULARIZE=1 -sEXPORT_ES6=1 -sNO_EXIT_RUNTIME=1 -sEXPORTED_RUNTIME_METHODS=ccall,wasmMemory,stringToNewUTF8,UTF8ToString,HEAPU32 -sEXPORTED_FUNCTIONS=_malloc,_free"
+  },
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
