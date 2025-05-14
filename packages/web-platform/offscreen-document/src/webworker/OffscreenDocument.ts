@@ -5,26 +5,20 @@ import {
   OperationType,
   type ElementOperation,
 } from '../types/ElementOperation.js';
-import { _attributes, OffscreenElement } from './OffscreenElement.js';
+import { createElementModule, type ElementModule } from './ElementModule.js';
+import { OffscreenElement, uniqueId } from './OffscreenElement.js';
 import {
   eventPhase,
   OffscreenEvent,
   propagationStopped,
 } from './OffscreenEvent.js';
-import { OffscreenNode, uniqueId } from './OffscreenNode.js';
-
-export const operations = Symbol('operations');
+const operations = Symbol('operations');
 export const enableEvent = Symbol('enableEvent');
 export const getElementByUniqueId = Symbol('getElementByUniqueId');
 export const _onEvent = Symbol('_onEvent');
-const _uniqueIdInc = Symbol('uniqueIdInc');
 const _uniqueIdToElement = Symbol('_uniqueIdToElement');
-export class OffscreenDocument extends OffscreenNode {
-  /**
-   * @private
-   */
-  [_uniqueIdInc] = 1;
-
+const wasm = await createElementModule();
+export class OffscreenDocument extends OffscreenElement {
   /**
    * @private
    */
@@ -33,7 +27,9 @@ export class OffscreenDocument extends OffscreenNode {
   /**
    * @private
    */
-  [operations]: ElementOperation[] = [];
+  [operations]: {
+    operations: ElementOperation[];
+  };
 
   /**
    * @private
@@ -45,33 +41,43 @@ export class OffscreenDocument extends OffscreenNode {
   }
 
   [enableEvent]: (eventType: string, uid: number) => void;
+  static async create(_callbacks: {
+    onCommit: (operations: ElementOperation[]) => void;
+  }): Promise<OffscreenDocument> {
+    return new OffscreenDocument(_callbacks, wasm);
+  }
   constructor(
     private _callbacks: {
       onCommit: (operations: ElementOperation[]) => void;
     },
+    public _wasm: ElementModule,
   ) {
     const enableEventImpl: (nm: string, uid: number) => void = (
       eventType,
       uid,
     ) => {
-      this[operations].push({
+      this[operations].operations.push({
         type: OperationType.EnableEvent,
         eventType,
         uid,
       });
     };
-    super(0, enableEventImpl);
+    const operationsImpl = {
+      operations: [],
+    };
+    super('', _wasm, operationsImpl, enableEventImpl);
+    this[operations] = operationsImpl;
     this[enableEvent] = enableEventImpl;
   }
 
   commit(): void {
-    const currentOperations = this[operations];
-    this[operations] = [];
+    const currentOperations = this[operations].operations;
+    this[operations].operations = [];
     this._callbacks.onCommit(currentOperations);
   }
 
   override append(element: OffscreenElement) {
-    this[operations].push({
+    this[operations].operations.push({
       type: OperationType.Append,
       uid: 0,
       cid: [element[uniqueId]],
@@ -80,12 +86,17 @@ export class OffscreenDocument extends OffscreenNode {
   }
 
   createElement(tagName: string): OffscreenElement {
-    const uniqueId = this[_uniqueIdInc]++;
-    const element = new OffscreenElement(tagName, this, uniqueId);
-    this[_uniqueIdToElement][uniqueId] = new WeakRef(element);
-    this[operations].push({
+    const element = new OffscreenElement(
+      tagName,
+      this._wasm,
+      this[operations],
+      this[enableEvent],
+    );
+    const elementUniqueId = element[uniqueId];
+    this[_uniqueIdToElement][elementUniqueId] = new WeakRef(element);
+    this[operations].operations.push({
       type: OperationType.CreateElement,
-      uid: uniqueId,
+      uid: elementUniqueId,
       tag: tagName,
     });
     return element;
@@ -99,8 +110,8 @@ export class OffscreenDocument extends OffscreenNode {
   ) => {
     const target = this[getElementByUniqueId](targetUniqueId);
     if (target) {
-      const bubblePath: OffscreenNode[] = [];
-      let tempTarget: OffscreenNode = target;
+      const bubblePath: OffscreenElement[] = [];
+      let tempTarget: OffscreenElement = target;
       while (tempTarget.parentElement) {
         bubblePath.push(tempTarget.parentElement);
         tempTarget = tempTarget.parentElement;
@@ -131,33 +142,4 @@ export class OffscreenDocument extends OffscreenNode {
       }
     }
   };
-
-  get innerHTML(): string {
-    const buffer: string[] = [];
-    for (const child of this.children) {
-      getInnerHTMLImpl(buffer, child as OffscreenElement);
-    }
-    return buffer.join('');
-  }
-}
-
-function getInnerHTMLImpl(buffer: string[], element: OffscreenElement): void {
-  const tagName = element.tagName.toLowerCase();
-  buffer.push('<');
-  buffer.push(tagName);
-  for (const [key, value] of Object.entries(element[_attributes])) {
-    buffer.push(' ');
-    buffer.push(key);
-    buffer.push('="');
-    buffer.push(value);
-    buffer.push('"');
-  }
-
-  buffer.push('>');
-  for (const child of element.children) {
-    getInnerHTMLImpl(buffer, child as OffscreenElement);
-  }
-  buffer.push('</');
-  buffer.push(tagName);
-  buffer.push('>');
 }

@@ -37,5 +37,8 @@
     "Notice.txt",
     "CHANGELOG.md",
     "README.md"
-  ]
+  ],
+  "scripts": {
+    "build": "mkdir -p binary && emcc -O3 -Wno-unused-value clang/worker/*.c -o binary/element.js --emit-tsd element.d.ts -sINITIAL_HEAP=128MB -sSTACK_SIZE=128MB --bind -sMODULARIZE=1 -sEXPORT_ES6=1 -sNO_EXIT_RUNTIME=1 -sEXPORTED_RUNTIME_METHODS=ccall,wasmMemory,stringToNewUTF8,UTF8ToString,HEAPU32 -sEXPORTED_FUNCTIONS=_malloc,_free"
+  }
 }

@@ -9,6 +9,11 @@ export default defineConfig({
     benchmark: {
       include: ['**/tests/*.bench.vitest.spec.ts'],
     },
+    // poolOptions:{
+    //   forks:{
+    //     execArgv:['--cpu-prof'],
+    //   }
+    // }
   },
   plugins: [
     process.env['CI'] ? codspeed() : undefined,

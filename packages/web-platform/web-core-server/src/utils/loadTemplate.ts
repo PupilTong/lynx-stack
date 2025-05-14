@@ -1,7 +1,5 @@
 import { globalMuteableVars, type LynxTemplate } from '@lynx-js/web-constants';
 
-const templateCache: Map<LynxTemplate, LynxTemplate> = new Map();
-
 function createJsModuleUrl(content: string): string {
   const dataUrl = `data:text/javascript,${encodeURIComponent(content)}`;
   return dataUrl;
@@ -119,7 +117,7 @@ const backgroundInjectWithBind = [
 export function loadTemplate(
   rawTemplate: LynxTemplate,
 ): LynxTemplate {
-  const decodedTemplate: LynxTemplate = templateCache.get(rawTemplate) ?? {
+  const decodedTemplate: LynxTemplate = {
     ...rawTemplate,
     lepusCode: generateJavascriptUrl(
       rawTemplate.lepusCode,
@@ -134,7 +132,6 @@ export function loadTemplate(
       [],
     ),
   };
-  templateCache.set(rawTemplate, decodedTemplate);
   /**
    * This will cause a memory leak, which is expected.
    * We cannot ensure that the `URL.createObjectURL` created url will never be used, therefore here we keep it for the entire lifetime of this page.
