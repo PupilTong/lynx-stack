@@ -15,18 +15,18 @@ import { _onEvent } from '@lynx-js/offscreen-document/webworker';
 import { registerUpdateDataHandler } from './crossThreadHandlers/registerUpdateDataHandler.js';
 const { loadMainThread } = await import('@lynx-js/web-mainthread-apis');
 
-export function startMainThread(
+export async function startMainThread(
   uiThreadPort: MessagePort,
   backgroundThreadPort: MessagePort,
-): {
+): Promise<{
   docu: OffscreenDocument;
-} {
+}> {
   const uiThreadRpc = new Rpc(uiThreadPort, 'main-to-ui');
   const backgroundThreadRpc = new Rpc(backgroundThreadPort, 'main-to-bg');
   const markTimingInternal = createMarkTimingInternal(backgroundThreadRpc);
   const uiFlush = uiThreadRpc.createCall(flushElementTreeEndpoint);
   const reportError = uiThreadRpc.createCall(reportErrorEndpoint);
-  const docu = new OffscreenDocument({
+  const docu = await OffscreenDocument.create({
     onCommit: uiFlush,
   });
   uiThreadRpc.registerHandler(postOffscreenEventEndpoint, docu[_onEvent]);

@@ -18,7 +18,7 @@ describe('server-tests', () => {
   test('basic-performance-div-10000', async ({ task }) => {
     const testName = task.name;
     const rawTemplate = await readTemplate(testName);
-    const lynxView = createLynxView({
+    const lynxView = await createLynxView({
       browserConfig: {
         pixelRatio: 1,
         pixelHeight: 800,

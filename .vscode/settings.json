@@ -4,6 +4,7 @@
     "renovate.json": "jsonc",
     "*.mdx": "mdx",
     "*.snap.txt": "markdown",
+    "array_list.h": "c",
   },
   "[javascript]": {
     "editor.defaultFormatter": "dprint.dprint",

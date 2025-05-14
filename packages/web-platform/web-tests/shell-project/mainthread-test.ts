@@ -28,7 +28,7 @@ const div: HTMLElement = document.createElement('div');
 div.id = 'root';
 const shadowRoot = div.attachShadow({ mode: 'open' });
 document.body.appendChild(div);
-const docu = new OffscreenDocument({
+const docu = await OffscreenDocument.create({
   onCommit(operations) {
     elementOperations = operations;
   },
