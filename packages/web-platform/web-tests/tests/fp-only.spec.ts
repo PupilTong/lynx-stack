@@ -52,4 +52,22 @@ test.describe('SSR no Javascript tests', () => {
     await expect(target).toHaveCSS('width', '100px');
     await expect(target).toHaveCSS('background-color', 'rgb(255, 192, 203)');
   });
+  test('basic-class-selector', async ({ page }, { title }) => {
+    await goto(page, title);
+    await wait(100);
+    const computedStyle = await page.locator('#target').evaluate((dom) => {
+      const style = getComputedStyle(dom);
+      const height = style.height;
+      const width = style.width;
+      const backgroundColor = style.backgroundColor;
+      return {
+        height,
+        width,
+        backgroundColor,
+      };
+    });
+    expect(computedStyle.height).toBe('100px');
+    expect(computedStyle.width).toBe('100px');
+    expect(computedStyle.backgroundColor).toBe('rgb(255, 192, 203)');
+  });
 });
