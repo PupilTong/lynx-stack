@@ -5,6 +5,10 @@
     "*.mdx": "mdx",
     "*.snap.txt": "markdown",
     "array_list.h": "c",
+    "char_code_definitions.h": "c",
+    "compare": "c",
+    "type_traits": "c",
+    "emscripten.h": "c",
   },
   "[javascript]": {
     "editor.defaultFormatter": "dprint.dprint",

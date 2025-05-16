@@ -44,3 +44,8 @@ scrolltoupper
 scrolltolower
 foldview
 layoutchange
+
+# wasm
+opensource
+emsdk
+emscripten

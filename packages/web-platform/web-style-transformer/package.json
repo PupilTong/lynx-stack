@@ -19,5 +19,9 @@
     "Notice.txt",
     "CHANGELOG.md",
     "README.md"
-  ]
+  ],
+  "scripts": {
+    "build": "mkdir -p binary && emcc -std=c17 -O3 -Wno-unused-value css-tree-tokenizer/*.c -o binary/tokenizer.js --emit-tsd tokenizer.d.ts -sINITIAL_HEAP=512MB -sSTACK_SIZE=16MB --bind -sMODULARIZE=1 -sEXPORT_ES6=1 -sNO_EXIT_RUNTIME=1 -sEXPORTED_RUNTIME_METHODS=ccall,stringToUTF16,HEAP32 -sEXPORTED_FUNCTIONS=_malloc,_free",
+    "build:debug": "mkdir -p binary && emcc  --source-map-base=file:///home/haoyang/lynx/lynx-stack/packages/web-platform/web-style-transformer/binary/ -std=c17 -Wno-unused-value -g css-tree-tokenizer/*.c -o binary/index.html --emit-tsd tokenizer.d.ts -sINITIAL_HEAP=128MB -sSTACK_SIZE=128MB --bind -sMODULARIZE=1 -sEXPORT_ES6=1 -sNO_EXIT_RUNTIME=1 -sEXPORTED_RUNTIME_METHODS=ccall,wasmMemory,stringToUTF16,UTF16ToString,HEAP32 -sEXPORTED_FUNCTIONS=_malloc,_free"
+  }
 }
