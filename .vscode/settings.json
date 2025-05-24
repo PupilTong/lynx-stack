@@ -4,6 +4,9 @@
     "renovate.json": "jsonc",
     "*.mdx": "mdx",
     "*.snap.txt": "markdown",
+    "emscripten.h": "c",
+    "char_code_definitions.h": "c",
+    "compare": "c",
   },
   "[javascript]": {
     "editor.defaultFormatter": "dprint.dprint",
