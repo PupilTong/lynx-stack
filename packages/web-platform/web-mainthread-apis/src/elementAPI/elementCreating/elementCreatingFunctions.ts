@@ -32,16 +32,38 @@ export function initializeElementCreatingFunction(
     // @ts-expect-error
     info?: Record<string, any> | null | undefined,
   ) {
+    const uniqueId = uniqueIdInc++;
     // @ts-expect-error
     const __SetCSSId = runtime.__SetCSSId as ReturnType<
       typeof createStyleFunctions
     >['__SetCSSId'];
-    const htmlTag = runtime.config.tagMap[tag] ?? tag;
-    const element = runtime._createElement(
-      htmlTag,
-    ) as HTMLElement;
-    element.setAttribute(lynxTagAttribute, tag);
-    const uniqueId = uniqueIdInc++;
+    let element: HTMLElement;
+    if (runtime[lynxUniqueIdToElement][uniqueId]?.deref()) {
+      // SSR hydrate
+      element = runtime[lynxUniqueIdToElement][uniqueId].deref()!;
+    } else {
+      const htmlTag = runtime.config.tagMap[tag] ?? tag;
+      element = runtime._createElement(
+        htmlTag,
+      ) as HTMLElement;
+      element.setAttribute(lynxTagAttribute, tag);
+      runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
+      element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
+      if (cssId !== undefined) __SetCSSId([element], cssId);
+      else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
+        const parentComponent = runtime[getElementByUniqueId](
+          parentComponentUniqueId,
+        );
+        const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
+        if (parentCssId && parentCssId !== '0') {
+          __SetCSSId([element], parentCssId);
+        }
+      }
+      if (componentId !== undefined) {
+        // @ts-expect-error
+        runtime.__UpdateComponentID(element, componentId);
+      }
+    }
     const runtimeInfo: LynxRuntimeInfo = {
       uniqueId,
       componentConfig: {},
@@ -50,22 +72,6 @@ export function initializeElementCreatingFunction(
       parentComponentUniqueId,
     };
     runtime[elementToRuntimeInfoMap].set(element, runtimeInfo);
-    runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
-    element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
-    if (cssId !== undefined) __SetCSSId([element], cssId);
-    else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
-      const parentComponent = runtime[getElementByUniqueId](
-        parentComponentUniqueId,
-      );
-      const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
-      if (parentCssId && parentCssId !== '0') {
-        __SetCSSId([element], parentCssId);
-      }
-    }
-    if (componentId !== undefined) {
-      // @ts-expect-error
-      runtime.__UpdateComponentID(element, componentId);
-    }
     return element;
   }
   function __CreateComponent(

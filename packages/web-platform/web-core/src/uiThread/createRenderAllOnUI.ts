@@ -1,7 +1,8 @@
-import type {
-  StartMainThreadContextConfig,
-  RpcCallType,
-  updateDataEndpoint,
+import {
+  type StartMainThreadContextConfig,
+  type RpcCallType,
+  type updateDataEndpoint,
+  lynxUniqueIdAttribute,
 } from '@lynx-js/web-constants';
 import type { MainThreadRuntime } from '@lynx-js/web-mainthread-apis';
 import { Rpc } from '@lynx-js/web-worker-rpc';
@@ -13,6 +14,7 @@ const {
 export function createRenderAllOnUI(
   mainToBackgroundRpc: Rpc,
   shadowRoot: ShadowRoot,
+  isSSR: boolean,
   markTimingInternal: (
     timingKey: string,
     pipelineId?: string,
@@ -37,8 +39,23 @@ export function createRenderAllOnUI(
   );
   let runtime!: MainThreadRuntime;
   const start = async (configs: StartMainThreadContextConfig) => {
-    const mainThreadRuntime = startMainThread(configs);
-    runtime = await mainThreadRuntime;
+    if (isSSR) {
+      // the node 1 is the root element <page>, therefore the 0 is just a placeholder
+      const lynxUniqueIdToElement: WeakRef<HTMLElement>[] = [
+        new WeakRef<HTMLElement>(shadowRoot.firstElementChild as HTMLElement),
+      ];
+      const allLynxElements = shadowRoot.querySelectorAll<HTMLElement>(
+        `[${lynxUniqueIdAttribute}]`,
+      );
+      const length = allLynxElements.length;
+      for (let ii = 0; ii < length; ii++) {
+        const element = allLynxElements[ii]!;
+        lynxUniqueIdToElement.push(new WeakRef<HTMLElement>(element));
+      }
+      runtime = await startMainThread(configs, { lynxUniqueIdToElement });
+    } else {
+      runtime = await startMainThread(configs);
+    }
   };
   const updateDataMainThread: RpcCallType<typeof updateDataEndpoint> = async (
     ...args

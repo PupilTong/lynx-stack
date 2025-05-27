@@ -355,6 +355,7 @@ export class LynxView extends HTMLElement {
       this.#rendering = true;
       queueMicrotask(() => {
         this.#rendering = false;
+        const isSSR = this.getAttribute('ssr') != null;
         if (this.#instance) {
           this.disconnectedCallback();
         }
@@ -385,6 +386,7 @@ export class LynxView extends HTMLElement {
             nativeModulesMap: this.#nativeModulesMap,
             napiModulesMap: this.#napiModulesMap,
             lynxGroupId,
+            isSSR,
             callbacks: {
               nativeModulesCall: (
                 ...args: [name: string, data: any, moduleName: string]
@@ -409,24 +411,26 @@ export class LynxView extends HTMLElement {
             },
           });
           this.#instance = lynxView;
-          const styleElement = document.createElement('style');
-          this.shadowRoot!.append(styleElement);
-          const styleSheet = styleElement.sheet!;
-          for (const rule of inShadowRootStyles) {
-            styleSheet.insertRule(rule);
-          }
-          for (const rule of this.injectStyleRules) {
-            styleSheet.insertRule(rule);
-          }
-          const injectHeadLinks =
-            this.getAttribute('inject-head-links') !== 'false';
-          if (injectHeadLinks) {
-            document.head.querySelectorAll('link[rel="stylesheet"]').forEach(
-              (linkElement) => {
-                const href = (linkElement as HTMLLinkElement).href;
-                styleSheet.insertRule(`@import url("${href}");`);
-              },
-            );
+          if (!isSSR) {
+            const styleElement = document.createElement('style');
+            this.shadowRoot!.append(styleElement);
+            const styleSheet = styleElement.sheet!;
+            for (const rule of inShadowRootStyles) {
+              styleSheet.insertRule(rule);
+            }
+            for (const rule of this.injectStyleRules) {
+              styleSheet.insertRule(rule);
+            }
+            const injectHeadLinks =
+              this.getAttribute('inject-head-links') !== 'false';
+            if (injectHeadLinks) {
+              document.head.querySelectorAll('link[rel="stylesheet"]').forEach(
+                (linkElement) => {
+                  const href = (linkElement as HTMLLinkElement).href;
+                  styleSheet.insertRule(`@import url("${href}");`);
+                },
+              );
+            }
           }
         }
       });

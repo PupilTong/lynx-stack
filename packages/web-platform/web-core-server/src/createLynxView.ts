@@ -137,7 +137,6 @@ export async function createLynxView(
 
   async function renderToString(): Promise<string> {
     await firstPaintReadyPromise;
-    const ssrEncodeData = runtime?.ssrEncode?.();
     const buffer: string[] = [];
     buffer.push(
       '<lynx-view url="',
@@ -149,10 +148,6 @@ export async function createLynxView(
     }
     if (lynxViewStyle) {
       buffer.push(' style="', lynxViewStyle, '"');
-    }
-    if (ssrEncodeData) {
-      const encodeDataEncoded = ssrEncodeData ? encodeURI(ssrEncodeData) : ''; // to avoid XSS
-      buffer.push(' ssr-encode-data="', encodeDataEncoded, '"');
     }
     buffer.push(
       '><template shadowrootmode="open">',

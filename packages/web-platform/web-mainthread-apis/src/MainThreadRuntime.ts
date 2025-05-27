@@ -20,6 +20,7 @@ import {
   type LynxContextEventTarget,
   type LynxJSModule,
   systemInfo,
+  type SSRHydrateInfo,
 } from '@lynx-js/web-constants';
 import { globalMuteableVars } from '@lynx-js/web-constants';
 import { createMainThreadLynx, type MainThreadLynx } from './MainThreadLynx.js';
@@ -50,7 +51,9 @@ export interface MainThreadRuntimeCallbacks {
   publicComponentEvent: RpcCallType<typeof publicComponentEventEndpoint>;
   postExposure: RpcCallType<typeof postExposureEndpoint>;
 }
-
+interface SSRHydrateInfoImpl extends SSRHydrateInfo {
+  lynxUniqueIdToElement: WeakRef<HTMLElement>[];
+}
 export interface MainThreadRuntimeConfig {
   pageConfig: PageConfig;
   globalProps: unknown;
@@ -63,6 +66,7 @@ export interface MainThreadRuntimeConfig {
   createElement: Document['createElement'];
   rootDom: Pick<Element, 'append' | 'addEventListener'>;
   jsContext: LynxContextEventTarget;
+  ssrHydrateInfo?: SSRHydrateInfoImpl;
 }
 
 export const elementToRuntimeInfoMap = Symbol('elementToRuntimeInfoMap');
@@ -75,7 +79,7 @@ export class MainThreadRuntime {
   /**
    * @private
    */
-  [lynxUniqueIdToElement]: WeakRef<HTMLElement>[] = [];
+  [lynxUniqueIdToElement]: WeakRef<HTMLElement>[];
 
   /**
    * @private
@@ -114,6 +118,14 @@ export class MainThreadRuntime {
     this.lynx = createMainThreadLynx(config);
     this._rootDom = config.rootDom;
     this._createElement = config.createElement;
+    if (config.ssrHydrateInfo?.lynxUniqueIdToElement) {
+      this[lynxUniqueIdToElement] = config.ssrHydrateInfo.lynxUniqueIdToElement;
+    } else {
+      // uniqueId 0 is reserved , <page> starts from 1
+      this[lynxUniqueIdToElement] = [
+        new WeakRef<HTMLElement>(this._rootDom as HTMLElement),
+      ];
+    }
     /**
      * now create the style content
      * 1. flatten the styleInfo

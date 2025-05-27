@@ -8,6 +8,10 @@ import type { NapiModulesMap } from './NapiModules.js';
 import type { NativeModulesMap } from './NativeModules.js';
 import type { BrowserConfig } from './PageConfig.js';
 
+export interface SSRHydrateInfo {
+  /* WeakRef<Element> */
+  lynxUniqueIdToElement: WeakRef<any>[];
+}
 export interface StartMainThreadContextConfig {
   template: LynxTemplate;
   initData: Cloneable;

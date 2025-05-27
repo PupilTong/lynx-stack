@@ -17,6 +17,7 @@ import {
   LynxCrossThreadContext,
   type RpcCallType,
   type reportErrorEndpoint,
+  type SSRHydrateInfo,
 } from '@lynx-js/web-constants';
 import { registerCallLepusMethodHandler } from './crossThreadHandlers/registerCallLepusMethodHandler.js';
 import { registerGetCustomSectionHandler } from './crossThreadHandlers/registerGetCustomSectionHandler.js';
@@ -50,6 +51,7 @@ export function prepareMainThreadAPIs(
   markTimingInternal('lepus_execute_start');
   async function startMainThread(
     config: StartMainThreadContextConfig,
+    ssrHydrateInfo?: SSRHydrateInfo,
   ): Promise<MainThreadRuntime> {
     let isFp = true;
     const {
@@ -96,6 +98,7 @@ export function prepareMainThreadAPIs(
       lepusCode: lepusCodeLoaded,
       createElement,
       rootDom,
+      ssrHydrateInfo,
       callbacks: {
         mainChunkReady: () => {
           markTimingInternal('data_processor_start');
