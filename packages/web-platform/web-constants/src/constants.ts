@@ -10,7 +10,7 @@ export const componentIdAttribute = 'l-comp-id' as const;
 
 export const parentComponentUniqueIdAttribute = 'l-parent-comp-uid' as const;
 
-export const lynxTagAttribute = 'lynx-tag' as const;
+export const lynxTagAttribute = 'l-tag' as const;
 
 export const lynxDefaultDisplayLinearAttribute =
   'lynx-default-display-linear' as const;
