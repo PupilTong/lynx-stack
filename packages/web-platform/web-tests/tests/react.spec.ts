@@ -5,6 +5,7 @@ import { swipe, dragAndHold } from './utils.js';
 import { test, expect } from './coverage-fixture.js';
 import type { Page } from '@playwright/test';
 const ALL_ON_UI = !!process.env['ALL_ON_UI'];
+const isSSR = !!process.env['ENABLE_SSR'];
 
 const wait = async (ms: number) => {
   await new Promise((resolve) => {
@@ -49,7 +50,7 @@ const goto = async (
   testname2?: string,
   hasDir?: boolean,
 ) => {
-  let url = `/?casename=${testname}`;
+  let url = isSSR ? `/ssr?casename=${testname}` : `/?casename=${testname}`;
   if (hasDir) {
     url += '&hasdir=true';
   }
@@ -60,6 +61,7 @@ const goto = async (
     waitUntil: 'load',
   });
   await page.evaluate(() => document.fonts.ready);
+  if (isSSR) await wait(200);
 };
 
 test.describe('reactlynx3 tests', () => {

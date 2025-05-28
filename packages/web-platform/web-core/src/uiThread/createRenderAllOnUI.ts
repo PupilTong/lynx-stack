@@ -1,7 +1,8 @@
-import type {
-  StartMainThreadContextConfig,
-  RpcCallType,
-  updateDataEndpoint,
+import {
+  type StartMainThreadContextConfig,
+  type RpcCallType,
+  type updateDataEndpoint,
+  lynxUniqueIdAttribute,
 } from '@lynx-js/web-constants';
 import type { MainThreadRuntime } from '@lynx-js/web-mainthread-apis';
 import { Rpc } from '@lynx-js/web-worker-rpc';
@@ -21,6 +22,9 @@ export function createRenderAllOnUI(
   callbacks: {
     onError?: () => void;
   },
+  ssr?: {
+    ssrHydrateData: string | null;
+  },
 ) {
   if (!globalThis.module) {
     Object.assign(globalThis, { module: {} });
@@ -37,8 +41,36 @@ export function createRenderAllOnUI(
   );
   let runtime!: MainThreadRuntime;
   const start = async (configs: StartMainThreadContextConfig) => {
-    const mainThreadRuntime = startMainThread(configs);
-    runtime = await mainThreadRuntime;
+    if (ssr) {
+      // the node 1 is the root element <page>, therefore the 0 is just a placeholder
+      const lynxUniqueIdToElement: WeakRef<HTMLElement>[] = [
+        new WeakRef<HTMLElement>(shadowRoot.firstElementChild as HTMLElement),
+      ];
+      const allLynxElements = shadowRoot.querySelectorAll<HTMLElement>(
+        `[${lynxUniqueIdAttribute}]`,
+      );
+      const length = allLynxElements.length;
+      const ssrPartsMap: Record<string, HTMLElement> = {};
+      for (let ii = 0; ii < length; ii++) {
+        const element = allLynxElements[ii]! as HTMLElement;
+        const lynxUniqueId = Number(
+          element.getAttribute(lynxUniqueIdAttribute)!,
+        );
+        lynxUniqueIdToElement[lynxUniqueId] = new WeakRef<HTMLElement>(element);
+        ssrPartsMap[lynxUniqueId] = element;
+      }
+      const pageElement = lynxUniqueIdToElement[1]!.deref()!;
+
+      runtime = await startMainThread(configs, {
+        lynxUniqueIdToElement,
+        ssrHydrateData: ssr.ssrHydrateData,
+        templatePartsMap: new WeakMap<HTMLElement, Record<string, HTMLElement>>(
+          [[pageElement, ssrPartsMap]],
+        ),
+      });
+    } else {
+      runtime = await startMainThread(configs);
+    }
   };
   const updateDataMainThread: RpcCallType<typeof updateDataEndpoint> = async (
     ...args

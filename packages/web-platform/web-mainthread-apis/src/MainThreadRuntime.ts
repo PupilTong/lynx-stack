@@ -20,6 +20,7 @@ import {
   type LynxContextEventTarget,
   type LynxJSModule,
   systemInfo,
+  type SSRHydrateInfo,
 } from '@lynx-js/web-constants';
 import { globalMuteableVars } from '@lynx-js/web-constants';
 import { createMainThreadLynx, type MainThreadLynx } from './MainThreadLynx.js';
@@ -50,7 +51,11 @@ export interface MainThreadRuntimeCallbacks {
   publicComponentEvent: RpcCallType<typeof publicComponentEventEndpoint>;
   postExposure: RpcCallType<typeof postExposureEndpoint>;
 }
-
+interface SSRHydrateInfoImpl extends SSRHydrateInfo {
+  lynxUniqueIdToElement: WeakRef<HTMLElement>[];
+  ssrHydrateData: string | null;
+  templatePartsMap: WeakMap<HTMLElement, Record<string, HTMLElement>>;
+}
 export interface MainThreadRuntimeConfig {
   pageConfig: PageConfig;
   globalProps: unknown;
@@ -63,18 +68,26 @@ export interface MainThreadRuntimeConfig {
   createElement: Document['createElement'];
   rootDom: Pick<Element, 'append' | 'addEventListener'>;
   jsContext: LynxContextEventTarget;
+  ssrHydrateInfo?: SSRHydrateInfoImpl;
 }
 
 export const elementToRuntimeInfoMap = Symbol('elementToRuntimeInfoMap');
 export const updateCSSInJsStyle = Symbol('updateCSSInJsStyle');
 export const lynxUniqueIdToElement = Symbol('lynxUniqueIdToElement');
 export const switchExposureService = Symbol('switchExposureService');
+export const lynxTemplateParts = Symbol('lynxTemplateParts');
 
 export class MainThreadRuntime {
   /**
    * @private
    */
-  [lynxUniqueIdToElement]: WeakRef<HTMLElement>[] = [];
+
+  [lynxTemplateParts]: WeakMap<HTMLElement, Record<string, HTMLElement>>;
+
+  /**
+   * @private
+   */
+  [lynxUniqueIdToElement]: WeakRef<HTMLElement>[];
 
   /**
    * @private
@@ -106,6 +119,11 @@ export class MainThreadRuntime {
   [elementToRuntimeInfoMap]: WeakMap<HTMLElement, LynxRuntimeInfo> =
     new WeakMap();
 
+  /**
+   * @private
+   */
+  _lynxGlobalBindingValues: Record<string, any> = {};
+
   constructor(
     public config: MainThreadRuntimeConfig,
   ) {
@@ -113,6 +131,32 @@ export class MainThreadRuntime {
     this.lynx = createMainThreadLynx(config);
     this._rootDom = config.rootDom;
     this._createElement = config.createElement;
+    if (config.ssrHydrateInfo?.lynxUniqueIdToElement) {
+      this[lynxUniqueIdToElement] = config.ssrHydrateInfo.lynxUniqueIdToElement;
+      for (let ii = 1; ii < this[lynxUniqueIdToElement].length; ii++) {
+        const element = this[lynxUniqueIdToElement][ii]?.deref();
+        if (element) {
+          this[elementToRuntimeInfoMap].set(
+            element,
+            {
+              uniqueId: ii,
+              componentConfig: {},
+              lynxDataset: {},
+              eventHandlerMap: {},
+            },
+          );
+        }
+      }
+      this._page = this[lynxUniqueIdToElement][1]!.deref()!;
+    } else {
+      // uniqueId 0 is reserved , <page> starts from 1
+      this[lynxUniqueIdToElement] = [
+        new WeakRef<HTMLElement>(this._rootDom as HTMLElement),
+      ];
+    }
+    this[lynxTemplateParts] = config.ssrHydrateInfo?.templatePartsMap
+      ?? new WeakMap();
+
     /**
      * now create the style content
      * 1. flatten the styleInfo
@@ -172,10 +216,10 @@ export class MainThreadRuntime {
     for (const nm of globalMuteableVars) {
       Object.defineProperty(this, nm, {
         get: () => {
-          return this.__lynxGlobalBindingValues[nm];
+          return this._lynxGlobalBindingValues[nm];
         },
         set: (v: any) => {
-          this.__lynxGlobalBindingValues[nm] = v;
+          this._lynxGlobalBindingValues[nm] = v;
           for (const handler of this.__varsUpdateHandlers) {
             handler();
           }
@@ -196,11 +240,6 @@ export class MainThreadRuntime {
     currentElement.innerHTML =
       `[${lynxUniqueIdAttribute}="${uniqueId}"]{${newStyles}}`;
   }
-
-  /**
-   * @private
-   */
-  __lynxGlobalBindingValues: Record<string, any> = {};
 
   globalThis = new Proxy(this, {
     get: (target, prop) => {
@@ -226,16 +265,20 @@ export class MainThreadRuntime {
   processData?: ProcessDataCallback;
 
   ssrEncode?: () => string;
-  ssrHydrate?: (encodeData?: string) => void;
+  ssrHydrate?: (encodeData: string | null) => void;
 
   #renderPage?: (data: unknown) => void;
 
   declare renderPage: (data: unknown) => void;
 
-  __GetTemplateParts?: () => Record<string, Element> | undefined;
-
   __GetPageElement = () => {
     return this._page;
+  };
+
+  __GetTemplateParts: (element: HTMLElement) => Record<string, HTMLElement> = (
+    element,
+  ) => {
+    return this[lynxTemplateParts].get(element) ?? {};
   };
 
   _ReportError: RpcCallType<typeof reportErrorEndpoint>;

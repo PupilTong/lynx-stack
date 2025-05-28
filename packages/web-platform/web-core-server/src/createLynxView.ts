@@ -150,10 +150,6 @@ export async function createLynxView(
     if (lynxViewStyle) {
       buffer.push(' style="', lynxViewStyle, '"');
     }
-    if (ssrEncodeData) {
-      const encodeDataEncoded = ssrEncodeData ? encodeURI(ssrEncodeData) : ''; // to avoid XSS
-      buffer.push(' ssr-encode-data="', encodeDataEncoded, '"');
-    }
     buffer.push(
       '><template shadowrootmode="open">',
       '<style>',
@@ -169,8 +165,13 @@ export async function createLynxView(
     );
     buffer.push(
       '</template>',
-      '</lynx-view>',
     );
+
+    if (ssrEncodeData) {
+      const encodeDataEncoded = ssrEncodeData ? encodeURI(ssrEncodeData) : ''; // to avoid XSS
+      buffer.push('<!--', encodeDataEncoded, '-->');
+    }
+    buffer.push('</lynx-view>');
     return buffer.join('');
   }
   return {

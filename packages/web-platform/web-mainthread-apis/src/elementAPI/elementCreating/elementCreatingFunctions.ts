@@ -23,7 +23,7 @@ import type { createStyleFunctions } from '../style/styleFunctions.js';
 export function initializeElementCreatingFunction(
   runtime: MainThreadRuntime,
 ) {
-  let uniqueIdInc = 1;
+  let uniqueIdInc = runtime[lynxUniqueIdToElement].length;
   function createLynxElement(
     tag: string,
     parentComponentUniqueId: number,
@@ -32,6 +32,7 @@ export function initializeElementCreatingFunction(
     // @ts-expect-error
     info?: Record<string, any> | null | undefined,
   ) {
+    const uniqueId = uniqueIdInc++;
     // @ts-expect-error
     const __SetCSSId = runtime.__SetCSSId as ReturnType<
       typeof createStyleFunctions
@@ -41,21 +42,16 @@ export function initializeElementCreatingFunction(
       htmlTag,
     ) as HTMLElement;
     element.setAttribute(lynxTagAttribute, tag);
-    const uniqueId = uniqueIdInc++;
-    const runtimeInfo: LynxRuntimeInfo = {
-      uniqueId,
-      componentConfig: {},
-      lynxDataset: {},
-      eventHandlerMap: {},
-    };
-    runtime[elementToRuntimeInfoMap].set(element, runtimeInfo);
-    runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
     element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
+    element.setAttribute(
+      parentComponentUniqueIdAttribute,
+      parentComponentUniqueId.toString(),
+    );
+    runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
       const parentComponent =
-        runtime[lynxUniqueIdToElement][parentComponentUniqueId]
-          ?.deref();
+        runtime[lynxUniqueIdToElement][parentComponentUniqueId]?.deref();
       const parentCssId = parentComponent?.getAttribute(cssIdAttribute);
       if (parentCssId && parentCssId !== '0') {
         __SetCSSId([element], parentCssId);
@@ -65,6 +61,13 @@ export function initializeElementCreatingFunction(
       // @ts-expect-error
       runtime.__UpdateComponentID(element, componentId);
     }
+    const runtimeInfo: LynxRuntimeInfo = {
+      uniqueId,
+      componentConfig: {},
+      lynxDataset: {},
+      eventHandlerMap: {},
+    };
+    runtime[elementToRuntimeInfoMap].set(element, runtimeInfo);
     return element;
   }
   function __CreateComponent(
@@ -112,7 +115,7 @@ export function initializeElementCreatingFunction(
   ) {
     const page = createLynxElement('page', 0, cssID, componentID, info);
     page.setAttribute('part', 'page');
-    page.setAttribute(parentComponentUniqueIdAttribute, '0');
+    page.setAttribute(parentComponentUniqueIdAttribute, '1'); // page is the root component, so its parentComponentUniqueId is it's own uniqueId
     if (runtime.config.pageConfig.defaultDisplayLinear === false) {
       page.setAttribute(lynxDefaultDisplayLinearAttribute, 'false');
     }

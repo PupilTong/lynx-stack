@@ -9,11 +9,16 @@ import '@lynx-js/web-elements-compat/LinearContainer';
 import '@lynx-js/web-core/index.css';
 import './index.css';
 
-export const lynxViewTests = (callback: (lynxView: LynxView) => void) => {
-  const lynxView = document.createElement('lynx-view') as LynxView;
+const ALL_ON_UI = !!process.env.ALL_ON_UI;
+export const lynxViewTests = (
+  callback: (lynxView: LynxView) => void,
+  lynxView: LynxView,
+) => {
+  if (!lynxView) lynxView = document.createElement('lynx-view') as LynxView;
   lynxView.initData = { mockData: 'mockData' };
   lynxView.setAttribute('height', 'auto');
   lynxView.globalProps = { backgroundColor: 'pink' };
+  if (ALL_ON_UI) lynxView.setAttribute('thread-strategy', `all-on-ui`);
   lynxView.addEventListener('error', () => {
     lynxView.setAttribute('style', 'display:none');
     lynxView.innerHTML = '';
@@ -23,7 +28,7 @@ export const lynxViewTests = (callback: (lynxView: LynxView) => void) => {
     globalThis.timing = Object.assign(globalThis.timing ?? {}, ev.detail);
   });
   callback(lynxView);
-  document.body.append(lynxView);
+  if (!lynxView.parentElement) document.body.append(lynxView);
 
   Object.assign(globalThis, { lynxView });
 };

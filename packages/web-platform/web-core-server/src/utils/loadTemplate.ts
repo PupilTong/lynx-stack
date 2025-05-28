@@ -43,7 +43,7 @@ async function generateJavascriptUrl<T extends Record<string, string>>(
               'var {__globalProps} = lynx;',
               'lynx_runtime._updateVars=()=>{',
               ...muteableVars.map((nm) =>
-                `${nm} = lynx_runtime.__lynxGlobalBindingValues.${nm};`
+                `${nm} = lynx_runtime._lynxGlobalBindingValues.${nm};`
               ),
               '};\n',
               content,
