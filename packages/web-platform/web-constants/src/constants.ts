@@ -8,9 +8,11 @@ export const cssIdAttribute = 'l-css-id' as const;
 
 export const componentIdAttribute = 'l-comp-id' as const;
 
-export const parentComponentUniqueIdAttribute = 'l-parent-comp-uid' as const;
+export const parentComponentUniqueIdAttribute = 'l-p-comp-uid' as const;
 
-export const lynxTagAttribute = 'l-tag' as const;
+export const lynxDatasetAttribute = 'l-dataset' as const;
+
+export const lynxTagAttribute = 'lynx-tag' as const;
 
 export const lynxDefaultDisplayLinearAttribute =
   'lynx-default-display-linear' as const;
