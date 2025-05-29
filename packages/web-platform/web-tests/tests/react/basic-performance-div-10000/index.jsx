@@ -5,17 +5,20 @@ import { root } from '@lynx-js/react';
 
 function App() {
   return (
-    new Array(10000).fill(0).map((_, i) => (
-      <div
-        key={i}
-        id={`target-${i}`}
-        style={{
-          height: '100px',
-          width: '100px',
-          background: 'pink',
-        }}
-      />
-    ))
+    new Array(10000).fill(0).map((_, i) => {
+      console.log(`rendering target-${i}`);
+      return (
+        <div
+          key={i}
+          id={`target-${i}`}
+          style={{
+            height: '100px',
+            width: '100px',
+            background: 'pink',
+          }}
+        />
+      );
+    })
   );
 }
 

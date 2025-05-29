@@ -23,8 +23,9 @@ export function createStyleFunctions(
     element: HTMLElement,
     className: string,
   ) {
-    const newClassName = ((element.className ?? '') + ' ' + className)
-      .trim();
+    const newClassName =
+      ((element.getAttribute('class') ?? '') + ' ' + className)
+        .trim();
     element.setAttribute('class', newClassName);
     if (!runtime.config.pageConfig.enableCSSSelector) {
       const newStyleStr = decodeCssInJs(
@@ -59,7 +60,7 @@ export function createStyleFunctions(
   }
 
   function __GetClasses(element: HTMLElement) {
-    return (element.className ?? '').split(' ').filter(e => e);
+    return (element.getAttribute('class') ?? '').split(' ').filter(e => e);
   }
   function __AddInlineStyle(
     element: HTMLElement,

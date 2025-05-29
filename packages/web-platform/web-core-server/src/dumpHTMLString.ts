@@ -1,6 +1,6 @@
 import {
-  _attributes,
-  _children,
+  attributes,
+  children,
   innerHTML,
   type OffscreenDocument,
   type OffscreenElement,
@@ -20,7 +20,7 @@ function getInnerHTMLImpl(
   const localName = element.localName;
   buffer.push('<');
   buffer.push(localName);
-  for (const [key, value] of element[_attributes]) {
+  for (const [key, value] of element[attributes]) {
     buffer.push(' ');
     buffer.push(key);
     buffer.push('="');
@@ -32,14 +32,14 @@ function getInnerHTMLImpl(
   const templateImpl = shadowrootTemplates[localName];
   if (templateImpl) {
     const template = typeof templateImpl === 'function'
-      ? templateImpl(Object.fromEntries(element[_attributes].entries()))
+      ? templateImpl(Object.fromEntries(element[attributes].entries()))
       : templateImpl;
     buffer.push('<template shadowrootmode="open">', template, '</template>');
   }
   if (element[innerHTML]) {
     buffer.push(element[innerHTML]);
   } else {
-    for (const child of element[_children]) {
+    for (const child of element[children]) {
       getInnerHTMLImpl(
         buffer,
         child as OffscreenElement,
@@ -57,7 +57,7 @@ export function dumpHTMLString(
   element: OffscreenDocument,
   shadowrootTemplates: Record<string, ShadowrootTemplates>,
 ): void {
-  for (const child of element[_children]) {
+  for (const child of element[children]) {
     getInnerHTMLImpl(
       buffer,
       child as OffscreenElement,

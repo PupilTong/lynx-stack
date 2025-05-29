@@ -10,8 +10,10 @@ import {
 } from '@lynx-js/web-constants';
 import { Rpc } from '@lynx-js/web-worker-rpc';
 import { createMarkTimingInternal } from './crossThreadHandlers/createMainthreadMarkTimingInternal.js';
-import { OffscreenDocument } from '@lynx-js/offscreen-document/webworker';
-import { _onEvent } from '@lynx-js/offscreen-document/webworker';
+import {
+  createOffscreenDocument,
+  onEvent,
+} from '@lynx-js/offscreen-document/webworker';
 import { registerUpdateDataHandler } from './crossThreadHandlers/registerUpdateDataHandler.js';
 const { prepareMainThreadAPIs } = await import('@lynx-js/web-mainthread-apis');
 
@@ -24,10 +26,8 @@ export function startMainThreadWorker(
   const markTimingInternal = createMarkTimingInternal(backgroundThreadRpc);
   const uiFlush = uiThreadRpc.createCall(flushElementTreeEndpoint);
   const reportError = uiThreadRpc.createCall(reportErrorEndpoint);
-  const docu = new OffscreenDocument({
-    onCommit: uiFlush,
-  });
-  uiThreadRpc.registerHandler(postOffscreenEventEndpoint, docu[_onEvent]);
+  const docu = createOffscreenDocument(uiFlush);
+  uiThreadRpc.registerHandler(postOffscreenEventEndpoint, docu[onEvent]);
   const { startMainThread } = prepareMainThreadAPIs(
     backgroundThreadRpc,
     docu,

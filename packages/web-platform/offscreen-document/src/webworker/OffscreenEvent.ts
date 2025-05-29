@@ -12,8 +12,14 @@ export class OffscreenEvent extends Event {
     super(type);
   }
 
+  // @ts-expect-error
   override get target(): OffscreenElement {
     return this._target;
+  }
+
+  // @ts-expect-error
+  override get currentTarget(): OffscreenElement {
+    return (super.currentTarget as OffscreenEventTarget)[element];
   }
 
   [propagationStopped] = false;
@@ -30,5 +36,15 @@ export class OffscreenEvent extends Event {
 
   override get eventPhase() {
     return this[eventPhase];
+  }
+}
+
+const element = Symbol('element');
+
+export class OffscreenEventTarget extends EventTarget {
+  [element]: OffscreenElement;
+  constructor(e: OffscreenElement) {
+    super();
+    this[element] = e;
   }
 }

@@ -78,13 +78,13 @@ export function createCrossThreadEvent(
     type: eventName,
     timestamp: domEvent.timeStamp,
     target: {
-      id: targetElement.id,
+      id: targetElement.getAttribute('id') ?? '',
       dataset: targetElementRuntimeInfo.lynxDataset,
       uniqueId: targetElementRuntimeInfo.uniqueId,
     },
     currentTarget: currentTargetElementRuntimeInfo
       ? {
-        id: currentTargetElement.id,
+        id: currentTargetElement.getAttribute('id') ?? '',
         dataset: currentTargetElementRuntimeInfo.lynxDataset,
         uniqueId: currentTargetElementRuntimeInfo.uniqueId,
       }

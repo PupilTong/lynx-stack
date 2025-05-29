@@ -1,15 +1,17 @@
 // Copyright 2023 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
+
 import {
-  OperationType,
-  type ElementOperation,
-} from '../types/ElementOperation.js';
+  createElementOperation,
+  enableEventOperation,
+  endOperation,
+} from './ElementOperation.js';
 import {
-  _attributes,
-  _children,
-  ancestorDocument,
-  OffscreenElement,
+  createOffscreenElement,
+  eventTarget,
+  uniqueId,
+  type OffscreenElement,
 } from './OffscreenElement.js';
 import {
   eventPhase,
@@ -20,112 +22,158 @@ import {
 export const operations = Symbol('operations');
 export const enableEvent = Symbol('enableEvent');
 export const getElementByUniqueId = Symbol('getElementByUniqueId');
-export const _onEvent = Symbol('_onEvent');
-const _uniqueIdInc = Symbol('uniqueIdInc');
-const _uniqueIdToElement = Symbol('_uniqueIdToElement');
-export class OffscreenDocument extends OffscreenElement {
-  /**
-   * @private
-   */
-  [_uniqueIdInc] = 1;
+export const onEvent = Symbol('onEvent');
+export const operationsOfffset = Symbol('operationsOfffset');
+export const growOperation = Symbol('growOperation');
+export const uniqueIdToElement = Symbol('uniqueIdToElement');
 
-  /**
-   * @private
-   */
-  [_uniqueIdToElement]: WeakRef<OffscreenElement>[] = [];
-
-  /**
-   * @private
-   */
-  [operations]: ElementOperation[] = [];
-
-  /**
-   * @private
-   * @param uniqueId
-   * @returns
-   */
-  [getElementByUniqueId](uniqueId: number): OffscreenElement | undefined {
-    return this[_uniqueIdToElement][uniqueId]?.deref();
-  }
-
+export interface OffscreenDocumentBase {
+  [operations]: Uint16Array;
+  [operationsOfffset]: number;
+  [growOperation]: () => void;
+  [uniqueIdToElement]: WeakRef<OffscreenElement>[];
   [enableEvent]: (eventType: string, uid: number) => void;
-  constructor(
-    private _callbacks: {
-      onCommit: (operations: ElementOperation[]) => void;
-    },
-  ) {
-    const enableEventImpl: (nm: string, uid: number) => void = (
-      eventType,
-      uid,
-    ) => {
-      this[operations].push({
-        type: OperationType.EnableEvent,
-        eventType,
-        uid,
-      });
-    };
-    super('', 0);
-    this[ancestorDocument] = this;
-    this[enableEvent] = enableEventImpl;
-  }
-
-  commit(): void {
-    const currentOperations = this[operations];
-    this[operations] = [];
-    this._callbacks.onCommit(currentOperations);
-  }
-
-  createElement(tagName: string): OffscreenElement {
-    const uniqueId = this[_uniqueIdInc]++;
-    const element = new OffscreenElement(tagName, uniqueId);
-    element[ancestorDocument] = this;
-    this[_uniqueIdToElement][uniqueId] = new WeakRef(element);
-    this[operations].push({
-      type: OperationType.CreateElement,
-      uid: uniqueId,
-      tag: tagName,
-    });
-    return element;
-  }
-
-  [_onEvent] = (
+  [onEvent]: (
     eventType: string,
     targetUniqueId: number,
     bubbles: boolean,
     otherProperties: Parameters<typeof structuredClone>[0],
-  ) => {
-    const target = this[getElementByUniqueId](targetUniqueId);
-    if (target) {
-      const bubblePath: OffscreenElement[] = [];
-      let tempTarget: OffscreenElement = target;
-      while (tempTarget.parentElement) {
-        bubblePath.push(tempTarget.parentElement);
-        tempTarget = tempTarget.parentElement;
+  ) => void;
+  createElement(tagName: string): OffscreenElement;
+  commit(): void;
+}
+
+export type OffscreenDocument = OffscreenDocumentBase & OffscreenElement;
+
+export function createOffscreenDocument(
+  onCommit: (operations: ArrayBuffer) => void,
+): OffscreenDocument {
+  let currentSize = 32 * 1024 * 2; // 32 * 1024 uint16, 64KB
+  let growed = false;
+  let buf = new ArrayBuffer(currentSize << 1);
+  const document: OffscreenDocumentBase = {
+    [operations]: new Uint16Array(buf),
+    [uniqueIdToElement]: [],
+    commit() {
+      let newOffset = endOperation(this[operations], this[operationsOfffset]);
+      if (newOffset === 0) {
+        this[growOperation]();
+        newOffset = endOperation(this[operations], this[operationsOfffset]);
       }
-      const event = new OffscreenEvent(eventType, target);
-      Object.assign(event, otherProperties);
-      // capture phase
-      event[eventPhase] = Event.CAPTURING_PHASE;
-      for (let ii = bubblePath.length - 1; ii >= 0; ii--) {
-        const currentPhaseTarget = bubblePath[ii]!;
-        currentPhaseTarget.dispatchEvent(event);
-        if (event[propagationStopped]) {
-          return;
+      this[operationsOfffset] = newOffset;
+      onCommit(buf);
+      if (!growed) {
+        // shrink
+        currentSize >>= 1;
+      }
+      buf = new ArrayBuffer(currentSize << 1);
+      this[operations] = new Uint16Array(buf);
+      this[operationsOfffset] = 0;
+      growed = false;
+    },
+    [operationsOfffset]: 0,
+    [growOperation]() {
+      growed = true;
+      currentSize <<= 1;
+      buf = buf.transfer(currentSize << 1);
+      this[operations] = new Uint16Array(buf);
+      debugger;
+    },
+    createElement: function(tagName: string): OffscreenElement {
+      const element = createOffscreenElement(tagName, document);
+      let newOffset = createElementOperation(
+        this[operations],
+        this[operationsOfffset],
+        element[uniqueId],
+        tagName,
+      );
+      if (newOffset === 0) {
+        this[growOperation]();
+        newOffset = createElementOperation(
+          this[operations],
+          this[operationsOfffset],
+          element[uniqueId],
+          tagName,
+        );
+      }
+      this[operationsOfffset] = newOffset;
+      return element;
+    },
+    [enableEvent]: function(eventType: string, uid: number): void {
+      let newOffset = enableEventOperation(
+        this[operations],
+        this[operationsOfffset],
+        uid,
+        eventType,
+      );
+      if (newOffset === 0) {
+        this[growOperation]();
+        newOffset = enableEventOperation(
+          this[operations],
+          this[operationsOfffset],
+          uid,
+          eventType,
+        );
+      }
+      this[operationsOfffset] = newOffset;
+    },
+    [onEvent]: function(
+      eventType: string,
+      targetUniqueId: number,
+      bubbles: boolean,
+      otherProperties: Parameters<typeof structuredClone>[0],
+    ): void {
+      const target = this[uniqueIdToElement][targetUniqueId]?.deref();
+      if (target) {
+        const bubblePath: OffscreenElement[] = [];
+        let tempTarget: OffscreenElement = target;
+        while (tempTarget.parentElement) {
+          bubblePath.push(tempTarget.parentElement);
+          tempTarget = tempTarget.parentElement;
         }
-      }
-      // target phase
-      event[eventPhase] = Event.AT_TARGET;
-      target.dispatchEvent(event);
-      // bubble phase
-      if (bubbles) {
-        event[eventPhase] = Event.BUBBLING_PHASE;
-        for (const currentPhaseTarget of bubblePath) {
-          currentPhaseTarget.dispatchEvent(event);
+        const event = new OffscreenEvent(eventType, target);
+        Object.assign(event, otherProperties);
+        // capture phase
+        event[eventPhase] = Event.CAPTURING_PHASE;
+        for (let ii = bubblePath.length - 1; ii >= 0; ii--) {
+          const currentPhaseTarget = bubblePath[ii]!;
+          currentPhaseTarget[eventTarget].dispatchEvent(
+            event as unknown as Event,
+          );
           if (event[propagationStopped]) {
             return;
           }
         }
+        // target phase
+        event[eventPhase] = Event.AT_TARGET;
+        target[eventTarget].dispatchEvent(event as unknown as Event);
+        // bubble phase
+        if (bubbles) {
+          event[eventPhase] = Event.BUBBLING_PHASE;
+          for (const currentPhaseTarget of bubblePath) {
+            currentPhaseTarget[eventTarget].dispatchEvent(
+              event as unknown as Event,
+            );
+            if (event[propagationStopped]) {
+              return;
+            }
+          }
+        }
       }
-    }
+    },
   };
+  /**
+   * the reason we push two WeakRef<OffscreenElement>(document) is that
+   * the first one is a placeholder for skip the uniqueId 0,
+   */
+  // @ts-expect-error
+  document[uniqueIdToElement].push(new WeakRef<OffscreenElement>(document)); // this is never used, but we need to keep it for uniqueId 0
+  const element = createOffscreenElement('', document);
+  const finalDocument = Object.assign(element, document) as
+    & OffscreenDocument
+    & OffscreenElement;
+  document[uniqueIdToElement].push(
+    new WeakRef<OffscreenElement>(finalDocument),
+  );
+  return finalDocument;
 }

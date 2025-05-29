@@ -99,7 +99,7 @@ export function createAttributeAndPropertyFunctions(
   }
 
   function __GetID(element: HTMLElement): string {
-    return element.id;
+    return element.getAttribute('id') ?? '';
   }
 
   function __GetTag(element: HTMLElement): string {
@@ -125,7 +125,7 @@ export function createAttributeAndPropertyFunctions(
 
   function __SetID(element: HTMLElement, id: string | null) {
     if (typeof id === 'string') {
-      element.id = id;
+      element.setAttribute('id', id);
     } else {
       element.removeAttribute('id');
     }

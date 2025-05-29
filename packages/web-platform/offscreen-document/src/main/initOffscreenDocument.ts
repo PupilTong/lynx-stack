@@ -2,10 +2,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import {
-  OperationType,
-  type ElementOperation,
-} from '../types/ElementOperation.js';
+import { OperationType } from '../types/ElementOperation.js';
 
 function emptyHandler() {
   // no-op
@@ -53,6 +50,14 @@ function transferToCloneable(value: any): any {
     return obj;
   }
 }
+
+const getString = /* @__PURE__ */ (
+  buf: Uint16Array,
+  offset: number,
+  length: number,
+): string => {
+  return String.fromCharCode(...buf.subarray(offset, offset + length));
+};
 
 export function initOffscreenDocument(options: {
   shadowRoot: ShadowRoot;
@@ -105,74 +110,147 @@ export function initOffscreenDocument(options: {
     }
   }
 
-  function decodeOperation(operations: ElementOperation[]) {
-    for (const op of operations) {
-      if (op.type === OperationType.CreateElement) {
-        const element = document.createElement(op.tag);
-        uniqueIdToElement[op.uid] = new WeakRef(element);
-        elementToUniqueId.set(element, op.uid);
+  function decodeOperation(buf: ArrayBuffer) {
+    let offset = -1;
+    const {
+      CreateElement,
+      SetAttribute,
+      RemoveAttribute,
+      Append,
+      Remove,
+      InsertBefore,
+      ReplaceWith,
+      EnableEvent,
+      RemoveChild,
+      StyleDeclarationSetProperty,
+      StyleDeclarationRemoveProperty,
+      SetInnerHTML,
+      End,
+    } = OperationType;
+    const operations = new Uint16Array(buf);
+    while (operations[offset] !== End) {
+      const op = operations[++offset]! | 0;
+      const uid = operations[++offset]! | 0;
+      if (op === CreateElement) {
+        const tagLength = operations[++offset]! | 0;
+        const tag = getString(operations, ++offset, tagLength);
+        offset += tagLength;
+        const element = document.createElement(tag);
+        uniqueIdToElement[uid] = new WeakRef(element);
+        elementToUniqueId.set(element, uid);
+        offset += tagLength;
       } else {
-        const target = _getElement(op.uid);
-        switch (op.type) {
-          case OperationType.SetAttribute:
-            target.setAttribute(op.key, op.value);
-            break;
-          case OperationType.RemoveAttribute:
-            target.removeAttribute(op.key);
-            break;
-          case OperationType.Append:
+        const target = _getElement(uid);
+        switch (op) {
+          case SetAttribute:
             {
-              const children = op.cid.map(id => _getElement(id));
-              target.append(...children);
+              const keyLength = operations[++offset]! | 0;
+              const key = getString(operations, ++offset, keyLength);
+              offset += keyLength;
+              const valueLength = operations[++offset]! | 0;
+              const value = getString(operations, ++offset, valueLength);
+              target.setAttribute(key, value);
             }
             break;
-          case OperationType.Remove:
+          case RemoveAttribute:
+            {
+              const keyLength = operations[++offset]! | 0;
+              const key = getString(operations, ++offset, keyLength);
+              offset += keyLength;
+              target.removeAttribute(key);
+            }
+            break;
+          case Append:
+            {
+              const childrenCount = operations[++offset]! | 0;
+              const newChildren: HTMLElement[] = [];
+              for (let ii = 0; ii < childrenCount; ii++) {
+                const childId = operations[++offset]! | 0;
+                const child = _getElement(childId);
+                newChildren.push(child);
+              }
+              target.append(...newChildren);
+            }
+            break;
+          case Remove:
             target.remove();
             break;
-          case OperationType.ReplaceWith:
-            const newChildren = op.nid.map(id => _getElement(id));
+          case ReplaceWith:
+            const childrenCount = operations[++offset]! | 0;
+            const newChildren: HTMLElement[] = [];
+            for (let ii = 0; ii < childrenCount; ii++) {
+              const childId = operations[++offset]! | 0;
+              const child = _getElement(childId);
+              newChildren.push(child);
+            }
             target.replaceWith(...newChildren);
             break;
-          case OperationType.InsertBefore:
+          case InsertBefore:
             {
-              const kid = _getElement(op.cid);
-              const ref = op.ref ? _getElement(op.ref) : null;
+              const cid = operations[++offset]! | 0;
+              const refId = operations[++offset]! | 0;
+              const kid = _getElement(cid);
+              const ref = refId ? _getElement(refId) : null;
               target.insertBefore(kid, ref);
             }
             break;
-          case OperationType.EnableEvent:
+          case EnableEvent:
+            const eventTypeLength = operations[++offset]! | 0;
+            const eventType = getString(operations, ++offset, eventTypeLength);
+            offset += eventTypeLength;
             target.addEventListener(
-              op.eventType,
+              eventType,
               emptyHandler,
               { passive: true },
             );
-            if (!enabledEvents.has(op.eventType)) {
+            if (!enabledEvents.has(eventType)) {
               shadowRoot.addEventListener(
-                op.eventType,
+                eventType,
                 _eventHandler,
                 { passive: true, capture: true },
               );
-              enabledEvents.add(op.eventType);
+              enabledEvents.add(eventType);
             }
             break;
-          case OperationType.RemoveChild:
+          case RemoveChild:
             {
-              const kid = _getElement(op.cid);
+              const cid = operations[++offset]! | 0;
+              const kid = _getElement(cid);
               target.removeChild(kid);
             }
             break;
-          case OperationType.StyleDeclarationSetProperty:
+          case StyleDeclarationSetProperty:
             {
-              target.style.setProperty(op.property, op.value, op.priority);
+              const propertyLength = operations[++offset]! | 0;
+              const property = getString(operations, ++offset, propertyLength);
+              offset += propertyLength;
+              const valueLength = operations[++offset]! | 0;
+              const value = getString(operations, ++offset, valueLength);
+              offset += valueLength;
+              const priority = operations[++offset]! | 0;
+              target.style.setProperty(
+                property,
+                value,
+                priority ? '!important' : undefined,
+              );
             }
             break;
-          case OperationType.StyleDeclarationRemoveProperty:
+          case StyleDeclarationRemoveProperty:
             {
-              target.style.removeProperty(op.property);
+              const propertyLength = operations[++offset]! | 0;
+              const property = getString(operations, ++offset, propertyLength);
+              offset += propertyLength;
+              target.style.removeProperty(property);
             }
             break;
-          case OperationType.SetInnerHTML:
-            target.innerHTML = op.text;
+          case SetInnerHTML:
+            const textLength = operations[++offset]! | 0;
+            const text = getString(operations, ++offset, textLength);
+            offset += textLength;
+            // Note: this is not safe, but we assume the text is sanitized
+            // and does not contain any script tags..
+            // because this is only used for style content
+            target.innerText = text;
             break;
         }
       }

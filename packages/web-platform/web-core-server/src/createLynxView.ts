@@ -7,11 +7,6 @@ import { Rpc } from '@lynx-js/web-worker-rpc';
 import { prepareMainThreadAPIs } from '@lynx-js/web-mainthread-apis';
 import { loadTemplate } from './utils/loadTemplate.js';
 import {
-  _attributes,
-  OffscreenDocument,
-  OffscreenElement,
-} from '@lynx-js/offscreen-document/webworker';
-import {
   templateScrollView,
   templateXAudioTT,
   templateXImage,
@@ -27,6 +22,10 @@ import {
   templateXViewpageNg,
 } from '@lynx-js/web-elements-template';
 import { dumpHTMLString } from './dumpHTMLString.js';
+import {
+  attributes,
+  createOffscreenDocument,
+} from '@lynx-js/offscreen-document/webworker';
 
 interface LynxViewConfig extends
   Pick<
@@ -69,13 +68,6 @@ const builtinTagTransformMap = {
   'svg': 'x-svg',
 };
 
-// @ts-expect-error
-OffscreenElement.prototype.toJSON = function toJSON(this: OffscreenElement) {
-  return {
-    ssrID: this[_attributes].get(lynxUniqueIdAttribute)!,
-  };
-};
-
 export async function createLynxView(
   config: LynxViewConfig,
 ) {
@@ -99,9 +91,7 @@ export async function createLynxView(
     mainWithBackgroundChannel.port1,
     'background-thread',
   );
-  const offscreenDocument = new OffscreenDocument({
-    onCommit: () => {
-    },
+  const offscreenDocument = createOffscreenDocument(() => {
   });
   const { startMainThread } = prepareMainThreadAPIs(
     backgroundThreadRpc,
