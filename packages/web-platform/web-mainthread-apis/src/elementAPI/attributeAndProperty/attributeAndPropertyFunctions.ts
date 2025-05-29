@@ -47,7 +47,7 @@ export function createAttributeAndPropertyFunctions(
     currentDataset[key] = value;
     element.setAttribute(
       lynxDatasetAttribute,
-      encodeURI(JSON.stringify(currentDataset)),
+      encodeURIComponent(JSON.stringify(currentDataset)),
     );
   }
 
