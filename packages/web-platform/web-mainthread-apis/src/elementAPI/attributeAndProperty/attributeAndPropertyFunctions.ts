@@ -80,7 +80,9 @@ export function createAttributeAndPropertyFunctions(
       lynxDatasetAttribute,
     );
     if (lynxDatasetattributeValue) {
-      return JSON.parse(decodeURI(lynxDatasetattributeValue)) as Record<
+      return JSON.parse(
+        decodeURIComponent(lynxDatasetattributeValue),
+      ) as Record<
         string,
         any
       >;

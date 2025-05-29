@@ -81,7 +81,7 @@ export function createCrossThreadEvent(
     lynxDatasetAttribute,
   );
   const currentTargetElementDataset = currentTargetElementDatasetRawValue
-    ? JSON.parse(decodeURI(currentTargetElementDatasetRawValue))
+    ? JSON.parse(decodeURIComponent(currentTargetElementDatasetRawValue))
     : {};
   return {
     type: eventName,

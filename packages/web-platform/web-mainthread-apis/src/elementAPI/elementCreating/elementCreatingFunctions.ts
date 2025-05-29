@@ -50,6 +50,10 @@ export function initializeElementCreatingFunction(
     runtime[elementToRuntimeInfoMap].set(element, runtimeInfo);
     runtime[lynxUniqueIdToElement][uniqueId] = new WeakRef(element);
     element.setAttribute(lynxUniqueIdAttribute, uniqueId.toString());
+    element.setAttribute(
+      parentComponentUniqueIdAttribute,
+      parentComponentUniqueId.toString(),
+    );
     if (cssId !== undefined) __SetCSSId([element], cssId);
     else if (parentComponentUniqueId >= 0) { // don't infer for uniqueid === -1
       const parentComponent =
