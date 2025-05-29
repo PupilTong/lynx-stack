@@ -76,7 +76,8 @@ function serializeDomElement(element: Element): ComparableElementJson {
 }
 
 function genFiberElementTree() {
-  const page = runtime[lynxUniqueIdToElement][1] as unknown as OffscreenElement;
+  const page = runtime[lynxUniqueIdToElement][1]
+    .deref() as unknown as OffscreenElement;
   if (runtime.__GetTag(page) === 'page') {
     return serializeElementThreadElement(page);
   } else {
