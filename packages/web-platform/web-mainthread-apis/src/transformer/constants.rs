@@ -1,22 +1,4 @@
-#[macro_export]
-macro_rules! str_to_u16_slice {
-  ($s:expr) => {{
-    const S: &str = $s;
-    const LEN: usize = S.len();
-    const fn make_array() -> [u16; LEN] {
-      let bytes = S.as_bytes();
-      let mut result = [0u16; LEN];
-      let mut i = 0;
-      while i < LEN {
-        result[i] = bytes[i] as u16;
-        i += 1;
-      }
-      result
-    }
-    const ARRAY: [u16; LEN] = make_array();
-    &ARRAY
-  }};
-}
+use crate::str_to_u16_slice;
 
 pub const IMPORTANT_STR_U16: &[u16] = str_to_u16_slice!(" !important");
 

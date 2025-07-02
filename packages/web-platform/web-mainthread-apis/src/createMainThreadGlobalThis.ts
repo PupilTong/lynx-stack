@@ -102,6 +102,7 @@ import {
 } from './pureElementPAPIs.js';
 import { createCrossThreadEvent } from './utils/createCrossThreadEvent.js';
 import { decodeCssInJs } from './utils/decodeCssInJs.js';
+import { styleInfoToRust } from './utils/tokenizer.js';
 
 export interface MainThreadRuntimeCallbacks {
   mainChunkReady: () => void;
@@ -158,7 +159,7 @@ export function createMainThreadGlobalThis(
    */
   const varsUpdateHandlers: (() => void)[] = [];
   const lynxGlobalBindingValues: Record<string, any> = {};
-
+  styleInfoToRust(styleInfo);
   /**
    * now create the style content
    * 1. flatten the styleInfo

@@ -1,4 +1,5 @@
 // @ts-ignore the wasm module built later than the ts code
+import type { StyleInfo } from '@lynx-js/web-constants';
 import init from '../../pkg/web_mainthread_apis.js';
 let wasm: Awaited<ReturnType<typeof init>>;
 let HEAPU16: Uint16Array | undefined;
@@ -95,4 +96,23 @@ export function transformParsedStyles(
   wasm.free(declarations_positions_ptr, styles.length * 5 * 4);
   wasm.free(source_ptr, str.length * 2);
   return [inlineStyle, chilrenStyle];
+}
+
+export function styleInfoToRust(
+  styleInfo: StyleInfo,
+): Uint8Array {
+  const styleInfoJs = Object.entries(styleInfo).map(([cssId, oneInfo]) => {
+    return [
+      parseFloat(cssId),
+      {
+        imports: [],
+        ...oneInfo,
+      },
+    ];
+  });
+  const binaryStyleInfo = wasm.gen_css_content_from_js_style_info(
+    styleInfoJs,
+  );
+  console.log(String.fromCharCode(...binaryStyleInfo));
+  return binaryStyleInfo;
 }

@@ -84,7 +84,7 @@ export function genCssContent(
   pageConfig: PageConfig,
 ): string {
   function getExtraSelectors(
-    cssId?: string,
+    cssId: string,
   ) {
     let suffix = '';
     if (!pageConfig.enableRemoveCSSScope) {

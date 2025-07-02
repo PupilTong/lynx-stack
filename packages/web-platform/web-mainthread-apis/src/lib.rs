@@ -1,7 +1,11 @@
+use js_sys::Uint16Array;
 use wasm_bindgen::prelude::*;
 
-pub mod parser;
-pub mod transformer;
+mod engine;
+mod parser;
+mod style_info;
+mod transformer;
+mod utils;
 // lifted from the `console_log` example
 /**
 accept a raw uint16 ptr from JS
@@ -79,4 +83,33 @@ extern "C" {
 )]
 extern "C" {
   fn on_extra_children_style(ptr: *const u16, len: usize);
+}
+
+#[wasm_bindgen]
+pub fn transform_js_style_info_to_rust_bincode(
+  style_info_js: &js_sys::Array,
+) -> js_sys::Uint8Array {
+  let style_info = style_info::compat_js::from_js_array(style_info_js);
+  let serialized = bincode::encode_to_vec(&style_info, bincode::config::standard()).unwrap();
+  js_sys::Uint8Array::from(serialized.as_slice())
+}
+
+#[wasm_bindgen]
+pub fn hydrate_style_info_from_bincode(data: &[u8]) {
+  let style_info: style_info::StyleInfo =
+    bincode::decode_from_slice(data, bincode::config::standard())
+      .unwrap()
+      .0;
+}
+
+#[wasm_bindgen]
+pub fn gen_css_content_from_js_style_info(style_info_js: &js_sys::Array) -> js_sys::Uint16Array {
+  let style_info = style_info::compat_js::from_js_array(style_info_js);
+  let page_config = engine::PageConfig {
+    enable_remove_css_scope: true,
+    enable_css_selector: true,
+  }; // This can be set based on your needs
+
+  let css_content_str_u16 = style_info::generate_style_info(&style_info, &page_config);
+  js_sys::Uint16Array::from(css_content_str_u16.as_slice())
 }
