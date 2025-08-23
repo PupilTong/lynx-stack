@@ -45,6 +45,7 @@ import {
   type SetDatasetPAPI,
   type SetIDPAPI,
   type SetInlineStylesPAPI,
+  type SwapElementPAPI,
   type UpdateComponentIDPAPI,
   type UpdateComponentInfoPAPI,
   type WebFiberElementImpl,
@@ -369,15 +370,27 @@ export const __GetTemplateParts: GetTemplatePartsPAPI = (
   return parts;
 };
 
-export const __MarkTemplateElement: MarkTemplateElementPAPI = (
+export const __MarkTemplateElement: MarkTemplateElementPAPI = /*#__PURE__*/ (
   element,
 ) => {
   element.setAttribute(lynxElementTemplateMarkerAttribute, '');
 };
 
-export const __MarkPartElement: MarkPartElementPAPI = (
+export const __MarkPartElement: MarkPartElementPAPI = /*#__PURE__*/ (
   element,
   partId,
 ) => {
   element.setAttribute(lynxPartIdAttribute, partId);
+};
+
+export const __SwapElement: SwapElementPAPI = /*#__PURE__*/ (
+  childA,
+  childB,
+) => {
+  const temp = document.createElement('div');
+  // @ts-expect-error fixme
+  childA.replaceWith(temp);
+  childB.replaceWith(childA);
+  // @ts-expect-error fixme
+  temp.replaceWith(childB);
 };
