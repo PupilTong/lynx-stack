@@ -239,7 +239,28 @@ export function applyEntry(
     }
 
     if (isWeb) {
-      chain
+      chain.plugin(PLUGIN_NAME_RUNTIME_WRAPPER)
+        .use(RuntimeWrapperWebpackPlugin, [{
+          injectVars(vars) {
+            const UNUSED_VARS = new Set([
+              'Card',
+              'Component',
+              'ReactLynx',
+              'Behavior',
+            ])
+            return vars.map(name => {
+              if (UNUSED_VARS.has(name)) {
+                return `__${name}`
+              }
+              return name
+            })
+          },
+          targetSdkVersion,
+          // Inject runtime wrapper for all `.js` but not `main-thread.js` and `main-thread.[hash].js`.
+          test: /^(?!.*main-thread(?:\.[A-Fa-f0-9]*)?\.js$).*\.js$/,
+          experimental_isLazyBundle,
+        }])
+        .end()
         .plugin(PLUGIN_NAME_WEB)
         .use(WebEncodePlugin, [])
         .end()
