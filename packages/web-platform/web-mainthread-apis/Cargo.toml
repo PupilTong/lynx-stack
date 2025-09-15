@@ -1,0 +1,27 @@
+[package]
+name = "web-mainthread-apis"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+web-sys = { version = "0.3.77", features = [
+    "Element",
+    "Node",
+    "Document",
+    "Window",
+    "HtmlElement",
+    "CssStyleDeclaration",
+    "DomTokenList",
+    "NamedNodeMap",
+    "HtmlCollection",
+    "DocumentFragment",
+    "Attr",
+  ]}
+
+[features]
+noop = []

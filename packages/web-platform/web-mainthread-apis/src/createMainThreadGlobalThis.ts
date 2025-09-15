@@ -29,7 +29,7 @@ import {
   lynxTagAttribute,
   type MainThreadScriptEvent,
   W3cEventNameToLynx,
-  type WebFiberElementImpl,
+  type HTMLElement,
   type LynxRuntimeInfo,
   type CreateViewPAPI,
   type CreateTextPAPI,
@@ -119,7 +119,7 @@ export interface MainThreadRuntimeCallbacks {
   flushElementTree: (
     options: FlushElementTreeOptions,
     timingFlags: string[],
-    exposureChangedElements: WebFiberElementImpl[],
+    exposureChangedElements: HTMLElement[],
   ) => void;
   _ReportError: RpcCallType<typeof reportErrorEndpoint>;
   __OnLifecycleEvent: (lifeCycleEvent: Cloneable) => void;
@@ -170,15 +170,15 @@ export function createMainThreadGlobalThis(
     document,
   } = config;
   const { elementTemplate, lepusCode } = lynxTemplate;
-  const lynxUniqueIdToElement: WeakRef<WebFiberElementImpl>[] =
+  const lynxUniqueIdToElement: WeakRef<HTMLElement>[] =
     ssrHydrateInfo?.lynxUniqueIdToElement ?? [];
-  const elementToRuntimeInfoMap: WeakMap<WebFiberElementImpl, LynxRuntimeInfo> =
+  const elementToRuntimeInfoMap: WeakMap<HTMLElement, LynxRuntimeInfo> =
     new WeakMap();
 
-  let pageElement: WebFiberElementImpl | undefined = lynxUniqueIdToElement[1]
+  let pageElement: HTMLElement | undefined = lynxUniqueIdToElement[1]
     ?.deref();
   let uniqueIdInc = lynxUniqueIdToElement.length || 1;
-  const exposureChangedElements = new Set<WebFiberElementImpl>();
+  const exposureChangedElements = new Set<HTMLElement>();
 
   const commonHandler = (event: Event) => {
     if (!event.currentTarget) {
@@ -188,7 +188,7 @@ export function createMainThreadGlobalThis(
     const isCapture = event.eventPhase === Event.CAPTURING_PHASE;
     const lynxEventName = W3cEventNameToLynx[event.type] ?? event.type;
     const runtimeInfo = elementToRuntimeInfoMap.get(
-      currentTarget as any as WebFiberElementImpl,
+      currentTarget as any as HTMLElement,
     );
     if (runtimeInfo) {
       const hname = isCapture
@@ -377,7 +377,7 @@ export function createMainThreadGlobalThis(
     const htmlTag = tagMap[tag] ?? tag;
     const element = document.createElement(
       htmlTag,
-    ) as unknown as WebFiberElementImpl;
+    ) as unknown as HTMLElement;
     lynxUniqueIdToElement[uniqueId] = new WeakRef(element);
     const parentComponentCssID = lynxUniqueIdToElement[parentComponentUniqueId]
       ?.deref()?.getAttribute(cssIdAttribute);
@@ -626,7 +626,7 @@ export function createMainThreadGlobalThis(
   const createElementForElementTemplateData = (
     data: ElementTemplateData,
     parentComponentUniId: number,
-  ): WebFiberElementImpl => {
+  ): HTMLElement => {
     const element = __CreateElement(data.type, parentComponentUniId);
     __SetID(element, data.id);
     data.class && __SetClasses(element, data.class.join(' '));
@@ -651,7 +651,7 @@ export function createMainThreadGlobalThis(
 
   const applyEventsForElementTemplate: (
     data: ElementTemplateData,
-    element: WebFiberElementImpl,
+    element: HTMLElement,
   ) => void = (data, element) => {
     const uniqueId = uniqueIdInc++;
     element.setAttribute(lynxUniqueIdAttribute, uniqueId + '');
@@ -661,7 +661,7 @@ export function createMainThreadGlobalThis(
     }
     for (let ii = 0; ii < (data.children || []).length; ii++) {
       const childData = (data.children || [])[ii];
-      const childElement = element.children[ii] as WebFiberElementImpl;
+      const childElement = element.children[ii] as HTMLElement;
       if (childData && childElement) {
         applyEventsForElementTemplate(childData, childElement);
       }
@@ -674,13 +674,13 @@ export function createMainThreadGlobalThis(
   ) => {
     const elementTemplateData = elementTemplate[templateId];
     if (elementTemplateData) {
-      let clonedElements: WebFiberElementImpl[];
+      let clonedElements: HTMLElement[];
       if (templateIdToTemplate[templateId]) {
         clonedElements = Array.from(
           (templateIdToTemplate[templateId].content.cloneNode(
             true,
           ) as DocumentFragment).children,
-        ) as unknown as WebFiberElementImpl[];
+        ) as unknown as HTMLElement[];
       } else {
         clonedElements = elementTemplateData.map(data =>
           createElementForElementTemplateData(data, parentComponentUniId)

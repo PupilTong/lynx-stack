@@ -595,10 +595,10 @@ importers:
         version: link:../../web-platform/web-elements
       '@rsbuild/plugin-less':
         specifier: 1.5.0
-        version: 1.5.0(@rsbuild/core@1.5.4)
+        version: 1.5.0(@rsbuild/core@1.5.6)
       '@rsbuild/plugin-sass':
         specifier: 1.4.0
-        version: 1.4.0(@rsbuild/core@1.5.4)
+        version: 1.4.0(@rsbuild/core@1.5.6)
       commander:
         specifier: ^13.1.0
         version: 13.1.0
@@ -613,7 +613,7 @@ importers:
         version: 1.1.1
       rsbuild-plugin-tailwindcss:
         specifier: 0.2.3
-        version: 0.2.3(@rsbuild/core@1.5.4)(tailwindcss@3.4.17)
+        version: 0.2.3(@rsbuild/core@1.5.6)(tailwindcss@3.4.17)
       rslog:
         specifier: ^1.2.11
         version: 1.2.11
@@ -1267,13 +1267,13 @@ importers:
         version: 7.30.7(@types/node@24.3.0)
       '@rsbuild/plugin-sass':
         specifier: 1.4.0
-        version: 1.4.0(@rsbuild/core@1.5.4)
+        version: 1.4.0(@rsbuild/core@1.5.6)
       '@rsbuild/plugin-type-check':
         specifier: 1.2.4
-        version: 1.2.4(@rsbuild/core@1.5.4)(@rspack/core@1.5.2(@swc/helpers@0.5.17))(typescript@5.9.2)
+        version: 1.2.4(@rsbuild/core@1.5.6)(@rspack/core@1.5.2(@swc/helpers@0.5.17))(typescript@5.9.2)
       '@rsbuild/plugin-typed-css-modules':
         specifier: 1.1.0
-        version: 1.1.0(@rsbuild/core@1.5.4)
+        version: 1.1.0(@rsbuild/core@1.5.6)
       '@rspress/core':
         specifier: 2.0.0-beta.28
         version: 2.0.0-beta.28(@types/react@19.1.10)(acorn@8.15.0)
@@ -9761,9 +9761,9 @@ snapshots:
       - lightningcss
       - webpack
 
-  '@rsbuild/plugin-less@1.5.0(@rsbuild/core@1.5.4)':
+  '@rsbuild/plugin-less@1.5.0(@rsbuild/core@1.5.6)':
     dependencies:
-      '@rsbuild/core': 1.5.4
+      '@rsbuild/core': 1.5.6
       deepmerge: 4.3.1
       reduce-configs: 1.1.1
 
@@ -9784,17 +9784,14 @@ snapshots:
       reduce-configs: 1.1.1
       sass-embedded: 1.90.0
 
-  '@rsbuild/plugin-type-check@1.2.4(@rsbuild/core@1.5.4)(@rspack/core@1.5.2(@swc/helpers@0.5.17))(typescript@5.9.2)':
+  '@rsbuild/plugin-sass@1.4.0(@rsbuild/core@1.5.6)':
     dependencies:
+      '@rsbuild/core': 1.5.6
       deepmerge: 4.3.1
-      json5: 2.2.3
+      loader-utils: 2.0.4
+      postcss: 8.5.6
       reduce-configs: 1.1.1
-      ts-checker-rspack-plugin: 1.1.4(@rspack/core@1.5.2(@swc/helpers@0.5.17))(typescript@5.9.2)
-    optionalDependencies:
-      '@rsbuild/core': 1.5.4
-    transitivePeerDependencies:
-      - '@rspack/core'
-      - typescript
+      sass-embedded: 1.90.0
 
   '@rsbuild/plugin-type-check@1.2.4(@rsbuild/core@1.5.6)(@rspack/core@1.5.2(@swc/helpers@0.5.17))(typescript@5.9.2)':
     dependencies:
@@ -9811,6 +9808,10 @@ snapshots:
   '@rsbuild/plugin-typed-css-modules@1.1.0(@rsbuild/core@1.5.4)':
     optionalDependencies:
       '@rsbuild/core': 1.5.4
+
+  '@rsbuild/plugin-typed-css-modules@1.1.0(@rsbuild/core@1.5.6)':
+    optionalDependencies:
+      '@rsbuild/core': 1.5.6
 
   '@rsdoctor/client@1.2.3': {}
 
@@ -15255,12 +15256,6 @@ snapshots:
       publint: 0.3.12
     optionalDependencies:
       '@rsbuild/core': 1.5.6
-
-  rsbuild-plugin-tailwindcss@0.2.3(@rsbuild/core@1.5.4)(tailwindcss@3.4.17):
-    dependencies:
-      tailwindcss: 3.4.17
-    optionalDependencies:
-      '@rsbuild/core': 1.5.4
 
   rsbuild-plugin-tailwindcss@0.2.3(@rsbuild/core@1.5.6)(tailwindcss@3.4.17):
     dependencies:

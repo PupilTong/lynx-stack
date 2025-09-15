@@ -5,6 +5,7 @@ members = [
   "packages/react/transform",
   "packages/web-platform/inline-style-parser",
   "packages/web-platform/web-style-transformer",
+  "packages/web-platform/web-mainthread-apis",
 ]
 
 [workspace.dependencies]

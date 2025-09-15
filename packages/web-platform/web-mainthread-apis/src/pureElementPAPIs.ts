@@ -56,149 +56,8 @@ import {
 } from './style/transformInlineStyle.js';
 import hyphenateStyleName from 'hyphenate-style-name';
 
-export const __AppendElement: AppendElementPAPI = /*#__PURE__*/ (
-  parent,
-  child,
-) => parent.appendChild(child);
-
-export const __ElementIsEqual: ElementIsEqualPAPI = /*#__PURE__*/ (
-  left,
-  right,
-) => left === right;
-
-export const __FirstElement: FirstElementPAPI = /*#__PURE__*/ (
-  element,
-) => element.firstElementChild;
-
-export const __GetChildren: GetChildrenPAPI = /*#__PURE__*/ (
-  element,
-) => element.children ? [...element.children] : null;
-
-export const __GetParent: GetParentPAPI = /*#__PURE__*/ (
-  element,
-) => element.parentElement;
-
-export const __InsertElementBefore: InsertElementBeforePAPI = /*#__PURE__*/ (
-  parent,
-  child,
-  ref,
-) => parent.insertBefore(child, ref);
-
-export const __LastElement: LastElementPAPI = /*#__PURE__*/ (
-  element,
-) => element.lastElementChild;
-
-export const __NextElement: NextElementPAPI = /*#__PURE__*/ (
-  element,
-) => element.nextElementSibling;
-
-export const __RemoveElement: RemoveElementPAPI = /*#__PURE__*/ (
-  parent,
-  child,
-) => parent.removeChild(child);
-
-export const __ReplaceElement: ReplaceElementPAPI = /*#__PURE__*/ (
-  newElement,
-  oldElement,
-) => oldElement.replaceWith(newElement);
-
-export const __ReplaceElements: ReplaceElementsPAPI = /*#__PURE__*/ (
-  parent,
-  newChildren,
-  oldChildren,
-) => {
-  newChildren = Array.isArray(newChildren) ? newChildren : [newChildren];
-  if (
-    !oldChildren || (Array.isArray(oldChildren) && oldChildren?.length === 0)
-  ) {
-    parent.append(...newChildren);
-  } else {
-    oldChildren = Array.isArray(oldChildren) ? oldChildren : [oldChildren];
-    for (let ii = 1; ii < oldChildren.length; ii++) {
-      __RemoveElement(parent, oldChildren[ii]!);
-    }
-    const firstOldChildren = oldChildren[0]!;
-    firstOldChildren.replaceWith(...newChildren);
-  }
-};
-export const __AddConfig: AddConfigPAPI = /*#__PURE__*/ (
-  element,
-  type,
-  value,
-) => {
-  const currentComponentConfigString = element.getAttribute(
-    lynxComponentConfigAttribute,
-  );
-  let currentComponentConfig: Record<string, any> = currentComponentConfigString
-    ? JSON.parse(decodeURIComponent(currentComponentConfigString))
-    : {};
-  currentComponentConfig[type] = value;
-  element.setAttribute(
-    lynxComponentConfigAttribute,
-    encodeURIComponent(JSON.stringify(currentComponentConfig)),
-  );
-};
-
-export const __AddDataset: AddDatasetPAPI = /*#__PURE__*/ (
-  element,
-  key,
-  value,
-) => {
-  const currentDataset = __GetDataset(element);
-  currentDataset[key] = value;
-  element.setAttribute(
-    lynxDatasetAttribute,
-    encodeURIComponent(JSON.stringify(currentDataset)),
-  );
-  value
-    ? element.setAttribute('data-' + key, value.toString())
-    : element.removeAttribute('data-' + key);
-};
-
-export const __GetDataset: GetDatasetPAPI = /*#__PURE__*/ (
-  element,
-) => {
-  const datasetString = element.getAttribute(lynxDatasetAttribute);
-  const currentDataset: Record<string, any> = datasetString
-    ? JSON.parse(decodeURIComponent(datasetString))
-    : {};
-  return currentDataset;
-};
-
-export const __GetDataByKey: GetDataByKeyPAPI = /*#__PURE__*/ (
-  element,
-  key,
-) => {
-  const dataset = __GetDataset(element);
-  return dataset[key];
-};
-
-export const __GetAttributes: GetAttributesPAPI = /*#__PURE__*/ (
-  element,
-) => {
-  return Object.fromEntries(
-    element.getAttributeNames().map((
-      attributeName,
-    ) => [attributeName, element.getAttribute(attributeName)])
-      .filter((
-        [, value],
-      ) => value) as [string, string][],
-  );
-};
-
 export const __GetComponentID: GetComponentIdPAPI = /*#__PURE__*/ (element) =>
   element.getAttribute(componentIdAttribute);
-
-export const __GetElementConfig: GetElementConfigPAPI = /*#__PURE__*/ (
-  element,
-) => {
-  const currentComponentConfigString = element.getAttribute(
-    lynxComponentConfigAttribute,
-  );
-  return currentComponentConfigString
-    ? JSON.parse(decodeURIComponent(currentComponentConfigString))
-    : {};
-};
 
 export const __GetAttributeByName: GetAttributeByNamePAPI = /*#__PURE__*/ (
   element,
@@ -356,14 +215,14 @@ export const __GetTemplateParts: GetTemplatePartsPAPI = (
     return {};
   }
   const templateUniqueId = __GetElementUniqueID(templateElement);
-  const parts: Record<string, WebFiberElementImpl> = {};
+  const parts: Record<string, HTMLElement> = {};
   const partElements = templateElement.querySelectorAll!(
-    `[${lynxUniqueIdAttribute}="${templateUniqueId}"] [${lynxPartIdAttribute}]:not([${lynxUniqueIdAttribute}="${templateUniqueId}"] [${lynxElementTemplateMarkerAttribute}] [${lynxPartIdAttribute}])`,
-  );
+    `[${lynxUniqueIdAttribute}="${templateUniqueId}"] [${lynxPartIdAttribute}]:not([${lynxUniqueIdAttribute}="${templateUniqueId}"] [${lynxElementTemplateMarkerAttribute}] [${lynxPartIdAttribute}])`
+  ) as unknown as HTMLElement[];
   for (const partElement of partElements) {
     const partId = partElement.getAttribute(lynxPartIdAttribute);
     if (partId) {
-      parts[partId] = partElement as WebFiberElementImpl;
+      parts[partId] = partElement;
     }
   }
   return parts;

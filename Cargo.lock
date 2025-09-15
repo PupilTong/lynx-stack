@@ -3415,12 +3415,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "web-mainthread-apis"
+version = "0.0.0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "web-style-transformer"
 version = "0.0.0"
 dependencies = [
  "inline-style-parser",
  "js-sys",
  "lazy_static",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-sys"
+version = "0.3.78"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77e4b637749ff0d92b8fad63aa1f7cff3cbe125fd49c175cd6345e7272638b12"
+dependencies = [
+ "js-sys",
  "wasm-bindgen",
 ]
 

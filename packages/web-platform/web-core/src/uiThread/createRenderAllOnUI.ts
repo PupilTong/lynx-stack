@@ -178,7 +178,6 @@ export function createRenderAllOnUI(
       }
 
       await startMainThread(configs, {
-        // @ts-expect-error
         lynxUniqueIdToElement: lynxUniqueIdToElement,
         lynxUniqueIdToStyleRulesIndex,
         ...ssrDumpInfo,
