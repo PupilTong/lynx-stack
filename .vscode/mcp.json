@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "lynx-web-core-mcp-server": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/haoyang/lynx/lynx-stack/packages/web-platform/web-mcp-server/dist/mcp/index.js"
+      ]
+    }
+  }
+}
