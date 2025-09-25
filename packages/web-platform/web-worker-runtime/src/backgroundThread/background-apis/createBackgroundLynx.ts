@@ -31,6 +31,13 @@ export function createBackgroundLynx(
     getNativeApp(): NativeApp {
       return nativeApp;
     },
+    // getDevtool() {
+    //   return {
+    //     addEventListener: () => {},
+    //     removeEventListener: () => {},
+    //     dispatchEvent: () => false,
+    //   }
+    // },
     getCoreContext() {
       return coreContext;
     },

@@ -116,7 +116,7 @@ export function applyEntry(
           import: imports,
           filename: mainThreadName,
         })
-        .when(isDev && !isWeb, entry => {
+        .when(isDev, entry => {
           const require = createRequire(import.meta.url)
           // use prepend to make sure it does not affect the exports
           // from the entry
@@ -137,7 +137,7 @@ export function applyEntry(
         })
         // in standalone lazy bundle mode, we do not add
         // other entries to avoid wrongly exporting from other entries
-        .when(isDev && !isWeb, entry => {
+        .when(isDev, entry => {
           // use prepend to make sure it does not affect the exports
           // from the entry
           entry

@@ -14,9 +14,9 @@ export function pluginTarget(): RsbuildPlugin {
       api.modifyBundlerChain((options, { environment, isProd }) => {
         if (isWeb(environment)) {
           options.target([
-            getESVersionTarget(isProd),
-            // Add `target: 'web'` to make Rsbuild inject HMR related code.
-            'web',
+            isProd
+              ? 'browserslist:Safari > 16.1, ChromeAndroid > 89'
+              : 'browserslist:last 3 Chrome versions',
           ])
         } else {
           options.target([getESVersionTarget(isProd)])
