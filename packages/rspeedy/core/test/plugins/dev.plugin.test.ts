@@ -73,8 +73,10 @@ describe('Plugins - Dev', () => {
 
     expect(vi.isMockFunction(ProvidePlugin)).toBe(true)
     expect(vi.mocked(ProvidePlugin)).toBeCalled()
-    expect(ProvidePlugin).toBeCalledWith({
+    expect(ProvidePlugin).toHaveBeenCalledWith({
       WebSocket: [require.resolve('@lynx-js/websocket'), 'default'],
+    })
+    expect(ProvidePlugin).toHaveBeenCalledWith({
       __webpack_dev_server_client__: [
         require.resolve('../../client/hmr/WebSocketClient.js'),
         'default',
@@ -97,6 +99,27 @@ describe('Plugins - Dev', () => {
         'packages/webpack/webpack-dev-transport'.replaceAll('/', path.sep),
       ),
     )
+  })
+
+  test('no Websocket class injected for web', async () => {
+    const rsbuild = await createStubRspeedy({
+      environments: {
+        web: {},
+      },
+    })
+
+    await rsbuild.unwrapConfig()
+
+    const { ProvidePlugin } = await import('../../src/webpack/ProvidePlugin.js')
+
+    expect(vi.isMockFunction(ProvidePlugin)).toBe(true)
+    expect(vi.mocked(ProvidePlugin)).toBeCalled()
+    expect(ProvidePlugin).toBeCalledWith({
+      __webpack_dev_server_client__: [
+        require.resolve('../../client/hmr/WebSocketClient.js'),
+        'default',
+      ],
+    })
   })
 
   test('not inject entry and provide variables in production', async () => {
@@ -501,8 +524,10 @@ describe('Plugins - Dev', () => {
 
     const { ProvidePlugin } = await import('../../src/webpack/ProvidePlugin.js')
 
-    expect(ProvidePlugin).toBeCalledWith({
+    expect(ProvidePlugin).toHaveBeenCalledWith({
       WebSocket: ['/foo', 'default'],
+    })
+    expect(ProvidePlugin).toHaveBeenCalledWith({
       __webpack_dev_server_client__: [
         require.resolve('../../client/hmr/WebSocketClient.js'),
         'default',
