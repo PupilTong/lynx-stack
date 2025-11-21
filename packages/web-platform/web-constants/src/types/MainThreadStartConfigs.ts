@@ -4,14 +4,12 @@
 
 import type { Cloneable } from './Cloneable.js';
 import type { InitI18nResources } from './index.js';
-import type { LynxTemplate } from './LynxModule.js';
 import type { NapiModulesMap } from './NapiModules.js';
 import type { NativeModulesMap } from './NativeModules.js';
 import type { BrowserConfig } from './PageConfig.js';
 
 export interface StartMainThreadContextConfig {
   templateUrl: string;
-  template: LynxTemplate;
   initData: Cloneable;
   globalProps: Cloneable;
   browserConfig: BrowserConfig;

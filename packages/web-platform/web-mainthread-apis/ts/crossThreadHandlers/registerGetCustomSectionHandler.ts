@@ -3,18 +3,18 @@
 // LICENSE file in the root directory of this source tree.
 import {
   getCustomSectionsEndpoint,
-  type LynxTemplate,
+  type MainThreadLynx,
   type Rpc,
 } from '@lynx-js/web-constants';
 
 export function registerGetCustomSectionHandler(
   rpc: Rpc,
-  customSections: LynxTemplate['customSections'],
+  lynx: MainThreadLynx,
 ): void {
   rpc.registerHandler(
     getCustomSectionsEndpoint,
     (key) => {
-      return customSections[key]?.content;
+      return lynx.getCustomSectionSync(key);
     },
   );
 }

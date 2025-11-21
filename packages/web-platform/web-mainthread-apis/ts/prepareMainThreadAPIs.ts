@@ -30,15 +30,16 @@ import {
   type TemplateLoader,
   type UpdateDataOptions,
   updateDataEndpoint,
+  systemInfo as staticSystemInfo,
 } from '@lynx-js/web-constants';
 import { registerCallLepusMethodHandler } from './crossThreadHandlers/registerCallLepusMethodHandler.js';
 import { registerGetCustomSectionHandler } from './crossThreadHandlers/registerGetCustomSectionHandler.js';
 import { createExposureService } from './utils/createExposureService.js';
-import { createQueryComponent } from './crossThreadHandlers/createQueryComponent.js';
 import { createMainThreadElementApis } from './createMainThreadElementApis.js';
 import { MainThreadJSBinding } from './mtsBinding.js';
-import { StyleManager } from './StyleManager.js';
 import { createMainThreadLynx } from './createMainThreadLynx.js';
+import { templateManager } from './templateManager.js';
+import { createMainGeneralThreadApis } from './createMainGeneralThreadApis.js';
 
 export function prepareMainThreadAPIs(
   backgroundThreadRpc: Rpc,
@@ -63,16 +64,7 @@ export function prepareMainThreadAPIs(
   const backgroundStart = backgroundThreadRpc.createCall(
     BackgroundThreadStartEndpoint,
   );
-  const publishEvent = backgroundThreadRpc.createCall(
-    publishEventEndpoint,
-  );
-  const publicComponentEvent = backgroundThreadRpc.createCall(
-    publicComponentEventEndpoint,
-  );
   const postExposure = backgroundThreadRpc.createCall(postExposureEndpoint);
-  const dispatchI18nResource = backgroundThreadRpc.createCall(
-    dispatchI18nResourceEndpoint,
-  );
   const updateDataBackground = backgroundThreadRpc.createCall(
     updateDataEndpoint,
   );
@@ -81,11 +73,9 @@ export function prepareMainThreadAPIs(
     config: StartMainThreadContextConfig,
     ssrHydrateInfo?: SSRHydrateInfo,
   ): Promise<void> {
-    let isFp = true;
     const {
       globalProps,
       templateUrl,
-      template,
       browserConfig,
       nativeModulesMap,
       napiModulesMap,
@@ -93,17 +83,28 @@ export function prepareMainThreadAPIs(
       initI18nResources,
     } = config;
     const mtsRealm = await mtsRealmPromise;
+    const pageConfig = templateManager.getPageConfig(templateUrl);
     markTimingInternal('decode_start');
     const jsContext = new LynxCrossThreadContext({
       rpc: backgroundThreadRpc,
       receiveEventEndpoint: dispatchJSContextOnMainThreadEndpoint,
       sendEventEndpoint: dispatchCoreContextOnBackgroundEndpoint,
     });
-    const i18nResources = initialI18nResources(initI18nResources);
+    const systemInfo = {
+      ...staticSystemInfo,
+      ...browserConfig,
+    };
     const mtsBinding = new MainThreadJSBinding(
       mtsRealm,
       backgroundThreadRpc,
       commitDocument,
+    );
+    const lynx = createMainThreadLynx(
+      templateUrl,
+      jsContext,
+      globalProps,
+      systemInfo,
+      mtsBinding,
     );
 
     const { elementAPIs, styleManager } = createMainThreadElementApis(
@@ -111,39 +112,46 @@ export function prepareMainThreadAPIs(
       rootDom,
       mtsBinding,
       tagMap,
-      template.pageConfig.enableCSSSelector,
-      template.pageConfig.enableRemoveCSSScope,
-      template.pageConfig.defaultDisplayLinear,
-      template.pageConfig.defaultOverflowVisible,
+      pageConfig.enableCSSSelector,
+      pageConfig.enableRemoveCSSScope,
+      pageConfig.defaultDisplayLinear,
+      pageConfig.defaultOverflowVisible,
       ssrHydrateInfo,
       ssrHooks,
     );
-    const mtsGlobalThisRef: { mtsGlobalThis: MainThreadGlobalThis } = {
-      mtsGlobalThis: undefined as unknown as MainThreadGlobalThis,
-    };
-    const __QueryComponent = createQueryComponent(
-      loadTemplate,
+    const mainThreadGeneralApis = createMainGeneralThreadApis(
+      templateUrl,
+      mtsRealm,
       styleManager,
       backgroundThreadRpc,
-      mtsGlobalThisRef,
       jsContext,
-      mtsRealm,
+      initI18nResources,
+      loadTemplate,
+      reportError,
+      initialI18nResources,
+      triggerI18nResourceFallback,
     );
-    const mtsGlobalThis = createMainThreadGlobalThis({
-      lynxTemplate: template,
-      mtsRealm,
-      jsContext,
-      tagMap,
-      browserConfig,
-      globalProps,
-      pageConfig,
-      rootDom,
-      ssrHydrateInfo,
-      ssrHooks,
-      document,
-      callbacks: {
-        updateCssOGStyle,
-        mainChunkReady: () => {
+    const mtsGlobalThis: MainThreadGlobalThis = Object.assign(
+      mtsRealm.globalWindow,
+      elementAPIs,
+      mainThreadGeneralApis,
+      {
+        lynx,
+        SystemInfo: {
+          ...systemInfo,
+          ...browserConfig,
+        },
+        __globalProps: globalProps,
+      },
+    );
+    const template = templateManager.getTemplate(templateUrl);
+    Object.defineProperty(mtsRealm.globalWindow, 'renderPage', {
+      get() {
+        return mtsGlobalThis.renderPage;
+      },
+      set(v) {
+        mtsGlobalThis.renderPage = v;
+        queueMicrotask(() => {
           markTimingInternal('data_processor_start');
           let initData = config.initData;
           if (
@@ -159,7 +167,7 @@ export function prepareMainThreadAPIs(
           );
           registerGetCustomSectionHandler(
             backgroundThreadRpc,
-            customSections,
+            lynx,
           );
           const { switchExposureService } = createExposureService(
             rootDom,
@@ -173,12 +181,6 @@ export function prepareMainThreadAPIs(
             initData,
             globalProps,
             template,
-            cardType: cardType ?? 'react',
-            customSections: Object.fromEntries(
-              Object.entries(customSections).filter(([, value]) =>
-                value.type !== 'lazy'
-              ).map(([k, v]) => [k, v.content]),
-            ),
             nativeModulesMap,
             napiModulesMap,
           });
@@ -197,64 +199,11 @@ export function prepareMainThreadAPIs(
             }
             mtsGlobalThis.ssrHydrate?.(ssrHydrateInfo.ssrEncodeData);
           }
-        },
-        flushElementTree: async (
-          options,
-          timingFlags,
-          exposureChangedElements,
-        ) => {
-          const pipelineId = options?.pipelineOptions?.pipelineID;
-          markTimingInternal('dispatch_start', pipelineId);
-          if (isFp) {
-            isFp = false;
-            jsContext.dispatchEvent({
-              type: '__OnNativeAppReady',
-              data: undefined,
-            });
-          }
-          markTimingInternal('layout_start', pipelineId);
-          markTimingInternal('ui_operation_flush_start', pipelineId);
-          await commitDocument(
-            exposureChangedElements as unknown as HTMLElement[],
-          );
-          markTimingInternal('ui_operation_flush_end', pipelineId);
-          markTimingInternal('layout_end', pipelineId);
-          markTimingInternal('dispatch_end', pipelineId);
-          flushMarkTimingInternal();
-          requestAnimationFrame(() => {
-            postTimingFlags(timingFlags, pipelineId);
-          });
-        },
-        _ReportError: reportError,
-        __OnLifecycleEvent: (data) => {
-          jsContext.dispatchEvent({
-            type: '__OnLifecycleEvent',
-            data,
-          });
-        },
-        /**
-         * Note :
-         * The parameter of lynx.performance.markTiming is (pipelineId:string, timingFlag:string)=>void
-         * But our markTimingInternal is (timingFlag:string, pipelineId?:string, timeStamp?:number) => void
-         */
-        markTiming: (a, b) => markTimingInternal(b, a),
-        publishEvent,
-        publicComponentEvent,
-        _I18nResourceTranslation: (options: I18nResourceTranslationOptions) => {
-          const matchedInitI18nResources = i18nResources.data?.find(i =>
-            getCacheI18nResourcesKey(i.options)
-              === getCacheI18nResourcesKey(options)
-          );
-          dispatchI18nResource(matchedInitI18nResources?.resource as Cloneable);
-          if (matchedInitI18nResources) {
-            return matchedInitI18nResources.resource;
-          }
-          return triggerI18nResourceFallback(options);
-        },
-        __QueryComponent,
+        });
       },
+      configurable: true,
+      enumerable: true,
     });
-    mtsGlobalThisRef.mtsGlobalThis = mtsGlobalThis;
     markTimingInternal('decode_end');
     await mtsRealm.loadScript(template.lepusCode.root);
     jsContext.__start(); // start the jsContext after the runtime is created

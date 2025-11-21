@@ -12,8 +12,8 @@ import type { MainThreadJSBinding } from './mtsBinding.js';
 export function createMainThreadLynx(
   templateUrl: string,
   jsContext: LynxContextEventTarget,
-  globalProps: Record<string, any>,
-  SystemInfo: Record<string, any>,
+  globalProps: Cloneable,
+  SystemInfo: Cloneable,
   mtsBinding: MainThreadJSBinding,
 ): MainThreadLynx {
   const requestAnimationFrameBrowserImpl = requestAnimationFrame;

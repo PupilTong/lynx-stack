@@ -16,13 +16,22 @@ class TemplateManager {
   ) {
     this.cache.set(templateUrl, template);
   }
+  getTemplate(
+    entryName: string,
+  ): LynxTemplate {
+    const template = this.cache.get(entryName);
+    if (!template) {
+      throw new Error(`template not found for entry: ${entryName}`);
+    }
+    return template;
+  }
   getElementTemplate(
     entryName: string,
     templateId: string,
   ): ElementTemplateData[] | undefined {
     const template = this.cache.get(entryName);
     if (!template) {
-      return undefined;
+      throw new Error(`template not found for entry: ${entryName}`);
     }
     return template.elementTemplate[templateId];
   }
@@ -32,9 +41,28 @@ class TemplateManager {
   ): CustomSectionInstance | undefined {
     const template = this.cache.get(entryName);
     if (!template) {
-      return undefined;
+      throw new Error(`template not found for entry: ${entryName}`);
     }
     return template.customSections[sectionKey];
+  }
+  getLepusCodeUrl(
+    entryName: string,
+    key: string,
+  ): string | undefined {
+    const template = this.cache.get(entryName);
+    if (!template) {
+      throw new Error(`template not found for entry: ${entryName}`);
+    }
+    return template.lepusCode[key];
+  }
+  getPageConfig(
+    entryName: string,
+  ): any {
+    const template = this.cache.get(entryName);
+    if (!template) {
+      throw new Error(`template not found for entry: ${entryName}`);
+    }
+    return template.pageConfig;
   }
 }
 

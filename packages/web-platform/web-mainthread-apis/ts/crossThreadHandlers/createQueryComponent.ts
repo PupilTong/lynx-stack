@@ -3,7 +3,6 @@ import {
   updateBTSTemplateCacheEndpoint,
   type JSRealm,
   type LynxCrossThreadContext,
-  type MainThreadGlobalThis,
   type QueryComponentPAPI,
   type Rpc,
   type RpcCallType,
@@ -15,9 +14,6 @@ export function createQueryComponent(
   loadTemplate: TemplateLoader,
   styleManager: StyleManager,
   backgroundThreadRpc: Rpc,
-  mtsGlobalThisRef: {
-    mtsGlobalThis: MainThreadGlobalThis;
-  },
   jsContext: LynxCrossThreadContext,
   mtsRealm: JSRealm,
 ): QueryComponentPAPI {
@@ -33,12 +29,13 @@ export function createQueryComponent(
         let lepusRootChunkExport = await mtsRealm.loadScript(
           template.lepusCode.root,
         );
-        if (mtsGlobalThisRef.mtsGlobalThis.processEvalResult) {
-          lepusRootChunkExport = mtsGlobalThisRef.mtsGlobalThis
-            .processEvalResult(
-              lepusRootChunkExport,
-              url,
-            );
+        // @ts-expect-error
+        if (mtsRealm.globalWindow?.processEvalResult) {
+          // @ts-expect-error
+          lepusRootChunkExport = mtsRealm.globalWindow?.processEvalResult(
+            lepusRootChunkExport,
+            url,
+          );
         }
         styleManager.appendStyleInfo(template.styleInfo, url);
         await updateBTSCachePromise;

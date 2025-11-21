@@ -1,5 +1,5 @@
 import type { systemInfo } from '../constants.js';
-import type { Cloneable } from './Cloneable.js';
+import type { Cloneable, CloneableObject } from './Cloneable.js';
 import type {
   ComponentAtIndexCallback,
   EnqueueComponentCallback,
@@ -382,12 +382,7 @@ export interface ElementPAPIs {
     options?: FlushElementTreeOptions,
   ) => void;
 }
-
-export interface MainThreadGlobalThis extends ElementPAPIs {
-  __globalProps: unknown;
-  SystemInfo: typeof systemInfo;
-  globalThis?: MainThreadGlobalThis;
-  lynx: MainThreadLynx;
+export interface MainThreadApis {
   processData?: ProcessDataCallback;
   ssrEncode?: () => string;
   ssrHydrate?: (encodeData?: string | null) => void;
@@ -398,7 +393,7 @@ export interface MainThreadGlobalThis extends ElementPAPIs {
   _I18nResourceTranslation: (
     options: I18nResourceTranslationOptions,
   ) => unknown | undefined;
-  // This is an empty implementation, just to avoid business call errors
+  // This is an empty implementation, just to avoid any exception
   _AddEventListener: (...args: unknown[]) => void;
   __QueryComponent: QueryComponentPAPI;
   // DSL runtime binding
@@ -411,3 +406,13 @@ export interface MainThreadGlobalThis extends ElementPAPIs {
   updatePage?: (data: Cloneable, options?: UpdateDataOptions) => void;
   runWorklet?: (obj: unknown, event: unknown) => void;
 }
+
+export type MainThreadGlobalThis =
+  & MainThreadApis
+  & ElementPAPIs
+  & typeof globalThis
+  & {
+    readonly __globalProps: unknown;
+    readonly SystemInfo: Cloneable;
+    readonly lynx: MainThreadLynx;
+  };

@@ -8,7 +8,7 @@ export interface MainThreadLynx {
   __globalProps: unknown;
   getCustomSectionSync: (key: string) => Cloneable;
   markPipelineTiming: (pipelineId: string, timingKey: string) => void;
-  SystemInfo: typeof systemInfo;
+  SystemInfo: Cloneable;
   setTimeout: typeof setTimeout;
   clearTimeout: typeof clearTimeout;
   setInterval: typeof setInterval;
