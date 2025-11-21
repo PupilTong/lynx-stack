@@ -3,22 +3,12 @@
 // LICENSE file in the root directory of this source tree.
 
 import {
-  type LynxTemplate,
-  type PageConfig,
+  type ElementPAPIs,
   type FlushElementTreeOptions,
-  type Cloneable,
-  type BrowserConfig,
   lynxUniqueIdAttribute,
-  type publishEventEndpoint,
-  type publicComponentEventEndpoint,
-  type reportErrorEndpoint,
-  type RpcCallType,
-  type LynxContextEventTarget,
-  systemInfo,
   type AddEventPAPI,
   type GetEventsPAPI,
   type GetEventPAPI,
-  type MainThreadGlobalThis,
   type SetEventsPAPI,
   type CreateElementPAPI,
   parentComponentUniqueIdAttribute,
@@ -27,7 +17,6 @@ import {
   LynxEventNameToW3cCommon,
   type LynxEventType,
   lynxTagAttribute,
-  type MainThreadScriptEvent,
   W3cEventNameToLynx,
   type LynxRuntimeInfo,
   type CreateViewPAPI,
@@ -41,6 +30,7 @@ import {
   type CreateRawTextPAPI,
   type CreateListPAPI,
   type CreateComponentPAPI,
+  type ElementFromBinaryPAPI,
   type SetAttributePAPI,
   type SetAttributePAPIUpdateListInfo,
   type UpdateListInfoAttributeValue,
@@ -52,17 +42,12 @@ import {
   type SetClassesPAPI,
   type GetPageElementPAPI,
   type MinimalRawEventObject,
-  type I18nResourceTranslationOptions,
   lynxDisposedAttribute,
   type SSRHydrateInfo,
   type SSRDehydrateHooks,
   type ElementTemplateData,
-  type ElementFromBinaryPAPI,
-  type JSRealm,
-  type QueryComponentPAPI,
   lynxEntryNameAttribute,
 } from '@lynx-js/web-constants';
-import { createMainThreadLynx } from './createMainThreadLynx.js';
 import {
   __AddClass,
   __AddConfig,
@@ -101,7 +86,10 @@ import {
   __UpdateComponentInfo,
   __GetAttributeByName,
 } from './pureElementPAPIs.js';
+import { StyleManager } from './StyleManager.js';
 import { createCrossThreadEvent } from './utils/createCrossThreadEvent.js';
+import type { MainThreadJSBinding } from './mtsBinding.js';
+import { templateManager } from './templateManager.js';
 
 const exposureRelatedAttributes = new Set<string>([
   'exposure-id',
@@ -115,69 +103,29 @@ const exposureRelatedAttributes = new Set<string>([
   'exposure-ui-margin-bottom',
   'exposure-ui-margin-left',
 ]);
-
-export interface MainThreadRuntimeCallbacks {
-  mainChunkReady: () => void;
-  flushElementTree: (
-    options: FlushElementTreeOptions | undefined,
-    timingFlags: string[],
-    exposureChangedElements: HTMLElement[],
-  ) => void;
-  _ReportError: RpcCallType<typeof reportErrorEndpoint>;
-  __OnLifecycleEvent: (lifeCycleEvent: Cloneable) => void;
-  markTiming: (pipelineId: string, timingKey: string) => void;
-  publishEvent: RpcCallType<typeof publishEventEndpoint>;
-  publicComponentEvent: RpcCallType<typeof publicComponentEventEndpoint>;
-  _I18nResourceTranslation: (
-    options: I18nResourceTranslationOptions,
-  ) => unknown | undefined;
-  updateCssOGStyle: (
-    uniqueId: number,
-    newClassName: string,
-    cssID: string | null,
-    entryName: string | null,
-  ) => void;
-  __QueryComponent: QueryComponentPAPI;
-}
-
-export interface MainThreadRuntimeConfig {
-  pageConfig: PageConfig;
-  globalProps: unknown;
-  callbacks: MainThreadRuntimeCallbacks;
-  lynxTemplate: LynxTemplate;
-  browserConfig: BrowserConfig;
-  tagMap: Record<string, string>;
-  rootDom:
-    & Pick<Element, 'append' | 'addEventListener'>
-    & Partial<Pick<ShadowRoot, 'querySelectorAll' | 'cloneNode'>>;
-  jsContext: LynxContextEventTarget;
-  ssrHydrateInfo?: SSRHydrateInfo;
-  ssrHooks?: SSRDehydrateHooks;
-  mtsRealm: JSRealm;
-  document: Document;
-}
-
-export function createMainThreadGlobalThis(
-  config: MainThreadRuntimeConfig,
-): MainThreadGlobalThis {
+export function createMainThreadElementApis(
+  templateUrl: string,
+  rootDom: ShadowRoot,
+  mtsBinding: MainThreadJSBinding,
+  tagMap: Record<string, string>,
+  enableCSSSelector: boolean,
+  enableRemoveCSSScope: boolean,
+  defaultDisplayLinear: boolean,
+  defaultOverflowVisible: boolean,
+  ssrHydrateInfo?: SSRHydrateInfo,
+  ssrHooks?: SSRDehydrateHooks,
+): { elementAPIs: ElementPAPIs; styleManager: StyleManager } {
   let timingFlags: string[] = [];
-  const {
-    callbacks,
-    tagMap,
-    pageConfig,
-    lynxTemplate,
-    rootDom,
-    globalProps,
-    ssrHydrateInfo,
-    ssrHooks,
-    mtsRealm,
-    document,
-  } = config;
-  const { elementTemplate, lepusCode } = lynxTemplate;
   const lynxUniqueIdToElement: WeakRef<HTMLElement>[] =
     ssrHydrateInfo?.lynxUniqueIdToElement ?? [];
   const elementToRuntimeInfoMap: WeakMap<HTMLElement, LynxRuntimeInfo> =
     new WeakMap();
+  const styleManager = new StyleManager(
+    rootDom,
+    enableCSSSelector,
+    enableRemoveCSSScope,
+    ssrHydrateInfo,
+  );
 
   let pageElement: HTMLElement | undefined = lynxUniqueIdToElement[1]
     ?.deref();
@@ -202,7 +150,6 @@ export function createMainThreadGlobalThis(
           ?.handler;
       const crossThreadEvent = createCrossThreadEvent(
         event as MinimalRawEventObject,
-        lynxEventName,
       );
       if (typeof hname === 'string') {
         const parentComponentUniqueId = Number(
@@ -215,27 +162,29 @@ export function createMainThreadGlobalThis(
             ? parentComponent?.getAttribute(componentIdAttribute) ?? undefined
             : undefined;
         if (componentId) {
-          callbacks.publicComponentEvent(
+          mtsBinding.publicComponentEvent(
             componentId,
             hname,
             crossThreadEvent,
+            event.target as HTMLElement,
+            event.currentTarget as HTMLElement,
           );
         } else {
-          callbacks.publishEvent(
+          mtsBinding.publishEvent(
             hname,
             crossThreadEvent,
+            event.target as HTMLElement,
+            event.currentTarget as HTMLElement,
           );
         }
         return true;
       } else if (hname) {
-        (crossThreadEvent as MainThreadScriptEvent).target.elementRefptr =
-          event.target;
-        if (crossThreadEvent.currentTarget) {
-          (crossThreadEvent as MainThreadScriptEvent).currentTarget!
-            .elementRefptr = event.currentTarget;
-        }
-        (mtsRealm.globalWindow as typeof globalThis & MainThreadGlobalThis)
-          .runWorklet?.(hname.value, [crossThreadEvent]);
+        mtsBinding.runWorklet(
+          hname.value,
+          crossThreadEvent,
+          event.target as HTMLElement,
+          event.currentTarget as HTMLElement,
+        );
       }
     }
     return false;
@@ -276,7 +225,7 @@ export function createMainThreadGlobalThis(
         const isExposure = eventName === 'uiappear'
           || eventName === 'uidisappear';
         if (isExposure && element.getAttribute('exposure-id') === '-1') {
-          mtsGlobalThis.__SetAttribute(element, 'exposure-id', null);
+          __SetAttribute(element, 'exposure-id', null);
         }
       }
     } else {
@@ -294,7 +243,7 @@ export function createMainThreadGlobalThis(
         const isExposure = eventName === 'uiappear'
           || eventName === 'uidisappear';
         if (isExposure && element.getAttribute('exposure-id') === null) {
-          mtsGlobalThis.__SetAttribute(element, 'exposure-id', '-1');
+          __SetAttribute(element, 'exposure-id', '-1');
         }
       }
     }
@@ -434,10 +383,10 @@ export function createMainThreadGlobalThis(
     page.setAttribute(parentComponentUniqueIdAttribute, '0');
     page.setAttribute(componentIdAttribute, componentID);
     __MarkTemplateElement(page);
-    if (pageConfig.defaultDisplayLinear === false) {
+    if (defaultDisplayLinear === false) {
       page.setAttribute(lynxDefaultDisplayLinearAttribute, 'false');
     }
-    if (pageConfig.defaultOverflowVisible === true) {
+    if (defaultOverflowVisible === true) {
       page.setAttribute('lynx-default-overflow-visible', 'true');
     }
     pageElement = page;
@@ -565,11 +514,11 @@ export function createMainThreadGlobalThis(
     const cssId = element.getAttribute(cssIdAttribute);
     const uniqueId = Number(element.getAttribute(lynxUniqueIdAttribute));
     const entryName = element.getAttribute(lynxEntryNameAttribute);
-    callbacks.updateCssOGStyle(
+    styleManager.updateCssOgStyle(
       uniqueId,
-      newClassName,
-      cssId,
-      entryName,
+      Number(cssId),
+      entryName ?? '',
+      element.getAttribute('class')?.split(' ') || [],
     );
   };
 
@@ -581,23 +530,12 @@ export function createMainThreadGlobalThis(
     const cssId = element.getAttribute(cssIdAttribute);
     const uniqueId = Number(element.getAttribute(lynxUniqueIdAttribute));
     const entryName = element.getAttribute(lynxEntryNameAttribute);
-    callbacks.updateCssOGStyle(
+    styleManager.updateCssOgStyle(
       uniqueId,
-      classNames ?? '',
-      cssId,
-      entryName,
+      Number(cssId),
+      entryName ?? '',
+      element.getAttribute('class')?.split(' ') || [],
     );
-  };
-
-  const __LoadLepusChunk: (path: string) => boolean = (path) => {
-    try {
-      path = lepusCode?.[path] ?? path;
-      mtsRealm.loadScriptSync(path);
-      return true;
-    } catch (e) {
-      console.error(`failed to load lepus chunk ${path}`, e);
-      return false;
-    }
   };
 
   const __FlushElementTree: (
@@ -617,7 +555,7 @@ export function createMainThreadGlobalThis(
     }
     const exposureChangedElementsArray = Array.from(exposureChangedElements);
     exposureChangedElements.clear();
-    callbacks.flushElementTree(
+    mtsBinding.flushElementTree(
       options,
       timingFlagsCopied,
       exposureChangedElementsArray,
@@ -628,7 +566,24 @@ export function createMainThreadGlobalThis(
     return pageElement;
   };
 
-  const templateIdToTemplate: Record<string, HTMLTemplateElement> = {};
+  const applyEventsForElementTemplate: (
+    data: ElementTemplateData,
+    element: HTMLElement,
+  ) => void = (data, element) => {
+    const uniqueId = uniqueIdInc++;
+    element.setAttribute(lynxUniqueIdAttribute, uniqueId + '');
+    for (const event of data.events || []) {
+      const { type, name, value } = event;
+      __AddEvent(element, type, name, value);
+    }
+    for (let ii = 0; ii < (data.children || []).length; ii++) {
+      const childData = (data.children || [])[ii];
+      const childElement = element.children[ii] as HTMLElement;
+      if (childData && childElement) {
+        applyEventsForElementTemplate(childData, childElement);
+      }
+    }
+  };
 
   const createElementForElementTemplateData = (
     data: ElementTemplateData,
@@ -656,30 +611,15 @@ export function createMainThreadGlobalThis(
     return element;
   };
 
-  const applyEventsForElementTemplate: (
-    data: ElementTemplateData,
-    element: HTMLElement,
-  ) => void = (data, element) => {
-    const uniqueId = uniqueIdInc++;
-    element.setAttribute(lynxUniqueIdAttribute, uniqueId + '');
-    for (const event of data.events || []) {
-      const { type, name, value } = event;
-      __AddEvent(element, type, name, value);
-    }
-    for (let ii = 0; ii < (data.children || []).length; ii++) {
-      const childData = (data.children || [])[ii];
-      const childElement = element.children[ii] as HTMLElement;
-      if (childData && childElement) {
-        applyEventsForElementTemplate(childData, childElement);
-      }
-    }
-  };
-
+  const templateIdToTemplate: Record<string, HTMLTemplateElement> = {};
   const __ElementFromBinary: ElementFromBinaryPAPI = (
     templateId,
     parentComponentUniId,
   ) => {
-    const elementTemplateData = elementTemplate[templateId];
+    const elementTemplateData = templateManager.getElementTemplate(
+      templateUrl,
+      templateId,
+    );
     if (elementTemplateData) {
       let clonedElements: HTMLElement[];
       if (templateIdToTemplate[templateId]) {
@@ -692,6 +632,7 @@ export function createMainThreadGlobalThis(
         clonedElements = elementTemplateData.map(data =>
           createElementForElementTemplateData(data, parentComponentUniId)
         );
+        // @ts-expect-error
         if (rootDom.cloneNode) {
           const template = document.createElement(
             'template',
@@ -715,96 +656,70 @@ export function createMainThreadGlobalThis(
     return [];
   };
 
-  let release = '';
-  const isCSSOG = !pageConfig.enableCSSSelector;
-  const SystemInfo = {
-    ...systemInfo,
-    ...config.browserConfig,
-  };
-  const mtsGlobalThis: MainThreadGlobalThis = {
-    __ElementFromBinary,
-    __GetTemplateParts: rootDom.querySelectorAll
-      ? __GetTemplateParts
-      : undefined,
-    __MarkTemplateElement,
-    __MarkPartElement,
-    __AddEvent: ssrHooks?.__AddEvent ?? __AddEvent,
-    __GetEvent,
-    __GetEvents,
-    __SetEvents,
-    __AppendElement,
-    __ElementIsEqual,
-    __FirstElement,
-    __GetChildren,
-    __GetParent,
-    __InsertElementBefore,
-    __LastElement,
-    __NextElement,
-    __RemoveElement,
-    __ReplaceElement,
-    __ReplaceElements,
-    __AddConfig,
-    __AddDataset,
-    __GetAttributes,
-    __GetComponentID,
-    __GetDataByKey,
-    __GetDataset,
-    __GetElementConfig,
-    __GetElementUniqueID,
-    __GetID,
-    __GetTag,
-    __SetConfig,
-    __SetDataset,
-    __SetID,
-    __UpdateComponentID,
-    __UpdateComponentInfo,
-    __CreateElement,
-    __CreateView,
-    __CreateText,
-    __CreateComponent,
-    __CreatePage,
-    __CreateRawText,
-    __CreateImage,
-    __CreateScrollView,
-    __CreateWrapperElement,
-    __CreateList,
-    __SetAttribute,
-    __SwapElement,
-    __UpdateListCallbacks,
-    __GetConfig: __GetElementConfig,
-    __GetAttributeByName,
-    __GetClasses,
-    __AddClass: isCSSOG ? __AddClassForCSSOG : __AddClass,
-    __SetClasses: isCSSOG ? __SetClassesForCSSOG : __SetClasses,
-    __AddInlineStyle,
-    __SetCSSId: isCSSOG ? __SetCSSIdForCSSOG : __SetCSSId,
-    __SetInlineStyles,
-    __LoadLepusChunk,
-    __GetPageElement,
-    __globalProps: globalProps,
-    __QueryComponent: callbacks.__QueryComponent,
-    SystemInfo,
-    lynx: createMainThreadLynx(config, SystemInfo),
-    _ReportError: (err, _) => callbacks._ReportError(err, _, release),
-    _SetSourceMapRelease: (errInfo) => release = errInfo?.release,
-    __OnLifecycleEvent: callbacks.__OnLifecycleEvent,
-    __FlushElementTree,
-    _I18nResourceTranslation: callbacks._I18nResourceTranslation,
-    _AddEventListener: () => {},
-    renderPage: undefined,
-  };
-  Object.assign(mtsRealm.globalWindow, mtsGlobalThis);
-  Object.defineProperty(mtsRealm.globalWindow, 'renderPage', {
-    get() {
-      return mtsGlobalThis.renderPage;
+  const isCSSOG = !enableCSSSelector;
+  return {
+    elementAPIs: {
+      __ElementFromBinary,
+      // @ts-expect-error
+      __GetTemplateParts: rootDom.querySelectorAll
+        ? __GetTemplateParts
+        : undefined,
+      __MarkTemplateElement,
+      __MarkPartElement,
+      __AddEvent: ssrHooks?.__AddEvent ?? __AddEvent,
+      __GetEvent,
+      __GetEvents,
+      __SetEvents,
+      __AppendElement,
+      __ElementIsEqual,
+      __FirstElement,
+      __GetChildren,
+      __GetParent,
+      __InsertElementBefore,
+      __LastElement,
+      __NextElement,
+      __RemoveElement,
+      __ReplaceElement,
+      __ReplaceElements,
+      __AddConfig,
+      __AddDataset,
+      __GetAttributes,
+      __GetComponentID,
+      __GetDataByKey,
+      __GetDataset,
+      __GetElementConfig,
+      __GetElementUniqueID,
+      __GetID,
+      __GetTag,
+      __SetConfig,
+      __SetDataset,
+      __SetID,
+      __UpdateComponentID,
+      __UpdateComponentInfo,
+      __CreateElement,
+      __CreateView,
+      __CreateText,
+      __CreateComponent,
+      __CreatePage,
+      __CreateRawText,
+      __CreateImage,
+      __CreateScrollView,
+      __CreateWrapperElement,
+      __CreateList,
+      __SetAttribute,
+      __SwapElement,
+      __UpdateListCallbacks,
+      __GetConfig: __GetElementConfig,
+      __GetAttributeByName,
+      __GetClasses,
+      __AddClass: isCSSOG ? __AddClassForCSSOG : __AddClass,
+      __SetClasses: isCSSOG ? __SetClassesForCSSOG : __SetClasses,
+      __AddInlineStyle,
+      __SetCSSId: isCSSOG ? __SetCSSIdForCSSOG : __SetCSSId,
+      __SetInlineStyles,
+      __GetPageElement,
+      __FlushElementTree,
     },
-    set(v) {
-      mtsGlobalThis.renderPage = v;
-      queueMicrotask(callbacks.mainChunkReady);
-    },
-    configurable: true,
-    enumerable: true,
-  });
-
-  return mtsRealm.globalWindow as typeof globalThis & MainThreadGlobalThis;
+    styleManager,
+  };
 }

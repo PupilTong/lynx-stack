@@ -10,15 +10,14 @@ import type { CssOGInfo } from '@lynx-js/web-constants';
  * @returns
  */
 export function decodeCssOG(
-  classes: string,
+  classes: string[],
   styleInfo: CssOGInfo,
   cssId: string | null,
 ) {
-  const classList = classes.split(' ').filter(e => e);
   let declarations: [string, string][] = [];
   const currentStyleInfo = styleInfo[cssId ?? '0'];
   if (currentStyleInfo) {
-    for (const oneClassName of classList) {
+    for (const oneClassName of classes) {
       const oneRule = currentStyleInfo[oneClassName];
       if (oneRule) declarations.push(...oneRule);
     }

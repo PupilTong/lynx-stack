@@ -3,6 +3,7 @@
 // LICENSE file in the root directory of this source tree.
 
 import {
+  type ElementPAPIs,
   BackgroundThreadStartEndpoint,
   publishEventEndpoint,
   publicComponentEventEndpoint,
@@ -32,15 +33,16 @@ import {
 } from '@lynx-js/web-constants';
 import { registerCallLepusMethodHandler } from './crossThreadHandlers/registerCallLepusMethodHandler.js';
 import { registerGetCustomSectionHandler } from './crossThreadHandlers/registerGetCustomSectionHandler.js';
-import { createMainThreadGlobalThis } from './createMainThreadGlobalThis.js';
 import { createExposureService } from './utils/createExposureService.js';
-import { appendStyleElement } from './utils/processStyleInfo.js';
 import { createQueryComponent } from './crossThreadHandlers/createQueryComponent.js';
+import { createMainThreadElementApis } from './createMainThreadElementApis.js';
+import { MainThreadJSBinding } from './mtsBinding.js';
+import { StyleManager } from './StyleManager.js';
+import { createMainThreadLynx } from './createMainThreadLynx.js';
 
 export function prepareMainThreadAPIs(
   backgroundThreadRpc: Rpc,
-  rootDom: Document | ShadowRoot,
-  document: Document,
+  rootDom: ShadowRoot,
   mtsRealmPromise: JSRealm | Promise<JSRealm>,
   commitDocument: (
     exposureChangedElements: HTMLElement[],
@@ -82,6 +84,7 @@ export function prepareMainThreadAPIs(
     let isFp = true;
     const {
       globalProps,
+      templateUrl,
       template,
       browserConfig,
       nativeModulesMap,
@@ -89,12 +92,6 @@ export function prepareMainThreadAPIs(
       tagMap,
       initI18nResources,
     } = config;
-    const {
-      styleInfo,
-      pageConfig,
-      customSections,
-      cardType,
-    } = template;
     const mtsRealm = await mtsRealmPromise;
     markTimingInternal('decode_start');
     const jsContext = new LynxCrossThreadContext({
@@ -103,20 +100,30 @@ export function prepareMainThreadAPIs(
       sendEventEndpoint: dispatchCoreContextOnBackgroundEndpoint,
     });
     const i18nResources = initialI18nResources(initI18nResources);
+    const mtsBinding = new MainThreadJSBinding(
+      mtsRealm,
+      backgroundThreadRpc,
+      commitDocument,
+    );
 
-    const { updateCssOGStyle, updateLazyComponentStyle } = appendStyleElement(
-      styleInfo,
-      pageConfig,
-      rootDom as unknown as Node,
-      document,
+    const { elementAPIs, styleManager } = createMainThreadElementApis(
+      templateUrl,
+      rootDom,
+      mtsBinding,
+      tagMap,
+      template.pageConfig.enableCSSSelector,
+      template.pageConfig.enableRemoveCSSScope,
+      template.pageConfig.defaultDisplayLinear,
+      template.pageConfig.defaultOverflowVisible,
       ssrHydrateInfo,
+      ssrHooks,
     );
     const mtsGlobalThisRef: { mtsGlobalThis: MainThreadGlobalThis } = {
       mtsGlobalThis: undefined as unknown as MainThreadGlobalThis,
     };
     const __QueryComponent = createQueryComponent(
       loadTemplate,
-      updateLazyComponentStyle,
+      styleManager,
       backgroundThreadRpc,
       mtsGlobalThisRef,
       jsContext,

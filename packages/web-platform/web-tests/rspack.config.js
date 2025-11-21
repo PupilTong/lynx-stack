@@ -24,7 +24,6 @@ const config = {
   entry: {
     main: './shell-project/index.ts',
     'web-elements': './shell-project/web-elements.ts',
-    'main-thread-test': './shell-project/mainthread-test.ts',
     'rpc-test': './shell-project/rpc-test/index.ts',
     'web-core': './shell-project/web-core.ts',
     'fp-only': './shell-project/fp-only.ts',

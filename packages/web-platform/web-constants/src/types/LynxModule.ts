@@ -17,15 +17,15 @@ export type ElementTemplateData = {
   events?: { type: LynxEventType; name: string; value: string }[];
   dataset?: Record<string, string>;
 };
-
+export type CustomSectionInstance = {
+  type?: 'lazy';
+  content: Cloneable;
+};
 export interface LynxTemplate {
   styleInfo: StyleInfo;
   pageConfig: PageConfig;
   customSections: {
-    [key: string]: {
-      type?: 'lazy';
-      content: Cloneable;
-    };
+    [key: string]: CustomSectionInstance;
   };
   cardType?: string;
   lepusCode: {

@@ -10,6 +10,7 @@ import type { NativeModulesMap } from './NativeModules.js';
 import type { BrowserConfig } from './PageConfig.js';
 
 export interface StartMainThreadContextConfig {
+  templateUrl: string;
   template: LynxTemplate;
   initData: Cloneable;
   globalProps: Cloneable;

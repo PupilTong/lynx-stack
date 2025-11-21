@@ -7,13 +7,13 @@ import {
   type QueryComponentPAPI,
   type Rpc,
   type RpcCallType,
-  type StyleInfo,
   type TemplateLoader,
 } from '@lynx-js/web-constants';
+import type { StyleManager } from '../StyleManager.js';
 
 export function createQueryComponent(
   loadTemplate: TemplateLoader,
-  updateLazyComponentStyle: (styleInfo: StyleInfo, entryName: string) => void,
+  styleManager: StyleManager,
   backgroundThreadRpc: Rpc,
   mtsGlobalThisRef: {
     mtsGlobalThis: MainThreadGlobalThis;
@@ -40,7 +40,7 @@ export function createQueryComponent(
               url,
             );
         }
-        updateLazyComponentStyle(template.styleInfo, url);
+        styleManager.appendStyleInfo(template.styleInfo, url);
         await updateBTSCachePromise;
         jsContext.dispatchEvent({
           type: '__OnDynamicJSSourcePrepared',

@@ -1,12 +1,20 @@
 // Copyright 2023 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
-import type { MainThreadLynx } from '@lynx-js/web-constants';
-import { type MainThreadRuntimeConfig } from './createMainThreadGlobalThis.js';
+import type {
+  Cloneable,
+  LynxContextEventTarget,
+  MainThreadLynx,
+} from '@lynx-js/web-constants';
+import { templateManager } from './templateManager.js';
+import type { MainThreadJSBinding } from './mtsBinding.js';
 
 export function createMainThreadLynx(
-  config: MainThreadRuntimeConfig,
+  templateUrl: string,
+  jsContext: LynxContextEventTarget,
+  globalProps: Record<string, any>,
   SystemInfo: Record<string, any>,
+  mtsBinding: MainThreadJSBinding,
 ): MainThreadLynx {
   const requestAnimationFrameBrowserImpl = requestAnimationFrame;
   const cancelAnimationFrameBrowserImpl = cancelAnimationFrame;
@@ -16,7 +24,7 @@ export function createMainThreadLynx(
   const clearIntervalBrowserImpl = clearInterval;
   return {
     getJSContext() {
-      return config.jsContext;
+      return jsContext;
     },
     requestAnimationFrame(cb: FrameRequestCallback) {
       return requestAnimationFrameBrowserImpl(cb);
@@ -24,11 +32,13 @@ export function createMainThreadLynx(
     cancelAnimationFrame(handler: number) {
       return cancelAnimationFrameBrowserImpl(handler);
     },
-    __globalProps: config.globalProps,
+    __globalProps: globalProps,
     getCustomSectionSync(key: string) {
-      return config.lynxTemplate.customSections[key]?.content;
+      return templateManager.getCustomSection(templateUrl, key) as Cloneable;
     },
-    markPipelineTiming: config.callbacks.markTiming,
+    markPipelineTiming(pipelineId: string, timingKey: string) {
+      mtsBinding.markTiming(pipelineId, timingKey);
+    },
     SystemInfo,
     setTimeout: setTimeoutBrowserImpl,
     clearTimeout: clearTimeoutBrowserImpl,

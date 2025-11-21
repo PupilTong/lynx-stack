@@ -1,11 +1,10 @@
-// Copyright 2023 The Lynx Authors. All rights reserved.
+// Copyright 2025 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
 import {
   type StyleInfo,
   type CssOGInfo,
-  type PageConfig,
   type CSSRule,
   cssIdAttribute,
   lynxTagAttribute,
@@ -15,8 +14,78 @@ import {
   type FlattenedStyleInfo,
   type FlattenedOneInfo,
 } from '@lynx-js/web-constants';
-import { transformParsedStyles } from './tokenizer.js';
-import { decodeCssOG } from './decodeCssOG.js';
+import { transformParsedStyles } from './utils/tokenizer.js';
+import { decodeCssOG } from './utils/decodeCssOG.js';
+
+export class StyleManager {
+  private lynxUniqueIdToStyleRulesIndex: number[];
+  private lazyCSSOGInfo: Record<string, CssOGInfo> = {};
+  private cardStyleElement: HTMLStyleElement;
+  constructor(
+    rootDom: ShadowRoot,
+    private enableCSSSelector: boolean,
+    private enableRemoveCSSScope: boolean,
+    ssrHydrateInfo?: SSRHydrateInfo,
+  ) {
+    this.lynxUniqueIdToStyleRulesIndex =
+      ssrHydrateInfo?.lynxUniqueIdToStyleRulesIndex || [];
+    if (ssrHydrateInfo?.cardStyleElement) {
+      this.cardStyleElement = ssrHydrateInfo.cardStyleElement;
+    } else {
+      this.cardStyleElement = document.createElement(
+        'style',
+      ) as unknown as HTMLStyleElement;
+      rootDom.appendChild(this.cardStyleElement);
+    }
+  }
+
+  updateCssOgStyle(
+    uniqueId: number,
+    cssId: number,
+    entryName: string,
+    classNames: string[],
+  ) {
+    const cardStyleElementSheet =
+      (this.cardStyleElement as unknown as HTMLStyleElement).sheet!;
+    const styleMap = this.lazyCSSOGInfo[entryName]!;
+    const newStyles = decodeCssOG(classNames, styleMap, cssId.toString());
+    if (this.lynxUniqueIdToStyleRulesIndex[uniqueId] !== undefined) {
+      const rule = cardStyleElementSheet
+        .cssRules[this.lynxUniqueIdToStyleRulesIndex[uniqueId]] as CSSStyleRule;
+      rule.style.cssText = newStyles;
+    } else {
+      const index = cardStyleElementSheet.insertRule(
+        `[${lynxUniqueIdAttribute}="${uniqueId}"]{${newStyles}}`,
+        cardStyleElementSheet.cssRules.length,
+      );
+      this.lynxUniqueIdToStyleRulesIndex[uniqueId] = index;
+    }
+  }
+  appendStyleInfo(
+    styleInfo: StyleInfo,
+    entryName: string,
+  ) {
+    /**
+     * now create the style content
+     * 1. flatten the styleInfo
+     * 2. transform the styleInfo to web css
+     * 3. generate the css in js info
+     * 4. create the style element
+     * 5. append the style element to the root dom
+     */
+    const flattenedStyleInfo = flattenStyleInfo(styleInfo);
+    transformToWebCss(flattenedStyleInfo);
+    if (!this.enableCSSSelector) {
+      this.lazyCSSOGInfo[entryName] = genCssOGInfo(flattenedStyleInfo);
+    }
+    const newStyleSheet = genCssContent(
+      flattenedStyleInfo,
+      this.enableRemoveCSSScope,
+      entryName,
+    );
+    this.cardStyleElement.textContent += newStyleSheet;
+  }
+}
 
 function topologicalSort(
   styleInfo: StyleInfo,
@@ -148,14 +217,14 @@ export function transformToWebCss(styleInfo: FlattenedStyleInfo) {
  */
 export function genCssContent(
   styleInfo: FlattenedStyleInfo,
-  pageConfig: PageConfig,
+  enableRemoveCSSScope: boolean,
   entryName?: string,
 ): string {
   function getExtraSelectors(
     cssId: string,
   ) {
     let suffix;
-    if (!pageConfig.enableRemoveCSSScope) {
+    if (!enableRemoveCSSScope) {
       suffix = `[${cssIdAttribute}="${cssId}"]`;
     } else {
       suffix = `[${lynxTagAttribute}]`;
@@ -191,7 +260,6 @@ export function genCssContent(
   }
   return finalCssContent.join('\n');
 }
-
 /**
  * generate the css-in-js data
  */
@@ -234,86 +302,4 @@ export function genCssOGInfo(styleInfo: FlattenedStyleInfo): CssOGInfo {
     });
   }
   return cssOGInfo;
-}
-
-export function appendStyleElement(
-  styleInfo: StyleInfo,
-  pageConfig: PageConfig,
-  rootDom: Node,
-  document: Document,
-  ssrHydrateInfo?: SSRHydrateInfo,
-) {
-  const lynxUniqueIdToStyleRulesIndex: number[] =
-    ssrHydrateInfo?.lynxUniqueIdToStyleRulesIndex ?? [];
-  /**
-   * now create the style content
-   * 1. flatten the styleInfo
-   * 2. transform the styleInfo to web css
-   * 3. generate the css in js info
-   * 4. create the style element
-   * 5. append the style element to the root dom
-   */
-  const flattenedStyleInfo = flattenStyleInfo(
-    styleInfo,
-  );
-  transformToWebCss(flattenedStyleInfo);
-  const cssOGInfo: CssOGInfo = pageConfig.enableCSSSelector
-    ? {}
-    : genCssOGInfo(flattenedStyleInfo);
-  const lazyCSSOGInfo: Record<string, CssOGInfo> = {};
-  let cardStyleElement: HTMLStyleElement;
-  if (ssrHydrateInfo?.cardStyleElement) {
-    cardStyleElement = ssrHydrateInfo.cardStyleElement;
-  } else {
-    cardStyleElement = document.createElement(
-      'style',
-    ) as unknown as HTMLStyleElement;
-    cardStyleElement.textContent = genCssContent(
-      flattenedStyleInfo,
-      pageConfig,
-      undefined,
-    );
-    rootDom.appendChild(cardStyleElement);
-  }
-  const updateCssOGStyle: (
-    uniqueId: number,
-    newClassName: string,
-    cssID: string | null,
-    entryName: string | null,
-  ) => void = (uniqueId, newClassName, cssID, entryName) => {
-    const cardStyleElementSheet =
-      (cardStyleElement as unknown as HTMLStyleElement).sheet!;
-    const styleMap = entryName && lazyCSSOGInfo[entryName]
-      ? lazyCSSOGInfo[entryName]
-      : cssOGInfo;
-    const newStyles = decodeCssOG(newClassName, styleMap, cssID);
-    if (lynxUniqueIdToStyleRulesIndex[uniqueId] !== undefined) {
-      const rule = cardStyleElementSheet
-        .cssRules[lynxUniqueIdToStyleRulesIndex[uniqueId]] as CSSStyleRule;
-      rule.style.cssText = newStyles;
-    } else {
-      const index = cardStyleElementSheet.insertRule(
-        `[${lynxUniqueIdAttribute}="${uniqueId}"]{${newStyles}}`,
-        cardStyleElementSheet.cssRules.length,
-      );
-      lynxUniqueIdToStyleRulesIndex[uniqueId] = index;
-    }
-  };
-  const updateLazyComponentStyle = (
-    styleInfo: StyleInfo,
-    entryName: string,
-  ) => {
-    const flattenedStyleInfo = flattenStyleInfo(styleInfo);
-    transformToWebCss(flattenedStyleInfo);
-    if (!pageConfig.enableCSSSelector) {
-      lazyCSSOGInfo[entryName] = genCssOGInfo(flattenedStyleInfo);
-    }
-    const newStyleSheet = genCssContent(
-      flattenedStyleInfo,
-      pageConfig,
-      entryName,
-    );
-    cardStyleElement.textContent += newStyleSheet;
-  };
-  return { updateCssOGStyle, updateLazyComponentStyle };
 }

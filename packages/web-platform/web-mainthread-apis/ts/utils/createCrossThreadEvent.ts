@@ -2,12 +2,11 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 import {
-  lynxDatasetAttribute,
-  lynxUniqueIdAttribute,
   type Cloneable,
   type CloneableObject,
   type LynxCrossThreadEvent,
   type MinimalRawEventObject,
+  W3cEventNameToLynx,
 } from '@lynx-js/web-constants';
 
 function toCloneableObject(obj: any): CloneableObject {
@@ -26,13 +25,7 @@ function toCloneableObject(obj: any): CloneableObject {
 
 export function createCrossThreadEvent(
   domEvent: MinimalRawEventObject,
-  eventName: string,
 ): LynxCrossThreadEvent {
-  const targetElement = domEvent.target as HTMLElement;
-  const currentTargetElement = (domEvent
-      .currentTarget as HTMLElement).getAttribute
-    ? (domEvent.currentTarget as HTMLElement)
-    : undefined;
   const type = domEvent.type;
   const params: Cloneable = {};
   const isTrusted = domEvent.isTrusted;
@@ -86,34 +79,12 @@ export function createCrossThreadEvent(
       y: (domEvent as MouseEvent).y,
     };
   }
-  const currentTargetDatasetString = currentTargetElement?.getAttribute(
-    lynxDatasetAttribute,
-  );
-  const currentTargetDataset = currentTargetDatasetString
-    ? JSON.parse(decodeURIComponent(currentTargetDatasetString))
-    : {};
-  const targetDatasetString = targetElement.getAttribute(lynxDatasetAttribute);
-  const targetDataset = targetDatasetString
-    ? JSON.parse(decodeURIComponent(targetDatasetString))
-    : {};
+
+  const lynxEventName = W3cEventNameToLynx[domEvent.type] ?? domEvent.type;
 
   return {
-    type: eventName,
+    type: lynxEventName,
     timestamp: domEvent.timeStamp,
-    target: {
-      id: targetElement.getAttribute('id'),
-      dataset: targetDataset,
-      uniqueId: Number(targetElement.getAttribute(lynxUniqueIdAttribute)),
-    },
-    currentTarget: currentTargetElement
-      ? {
-        id: currentTargetElement.getAttribute('id'),
-        dataset: currentTargetDataset,
-        uniqueId: Number(
-          currentTargetElement.getAttribute(lynxUniqueIdAttribute),
-        ),
-      }
-      : null,
     // @ts-expect-error
     detail,
     params,
