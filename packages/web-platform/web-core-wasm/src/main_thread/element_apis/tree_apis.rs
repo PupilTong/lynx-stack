@@ -1,8 +1,8 @@
-use super::MainThreadGlobalThis;
+use super::MainThreadWasmContext;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__SetDataset")]
   pub fn set_dataset(&mut self, unique_id: usize, new_dataset: &js_sys::Object) {
     let element_rc = self.get_element_data_by_unique_id(unique_id).unwrap();

@@ -1,13 +1,13 @@
 use super::super::style::{
   transform_declarations, transform_inline_style_string, STYLE_PROPERTY_MAP,
 };
-use super::{set_css_id_status, MainThreadGlobalThis};
+use super::{set_css_id_status, MainThreadWasmContext};
 use crate::constants;
 use crate::main_thread::element_apis::element;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__wasm_update_css_id")]
   pub fn set_css_id(&mut self, elements_unique_id: Vec<usize>, css_id: i32) {
     for unique_id in elements_unique_id.iter() {

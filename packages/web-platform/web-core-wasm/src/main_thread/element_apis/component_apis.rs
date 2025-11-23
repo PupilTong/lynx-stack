@@ -1,4 +1,4 @@
-use super::MainThreadGlobalThis;
+use super::MainThreadWasmContext;
 use crate::constants;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
@@ -15,7 +15,7 @@ pub struct ComponentInfoParams {
 }
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__GetComponentID")]
   pub fn get_component_id(&self, unique_id: usize) -> Option<String> {
     self

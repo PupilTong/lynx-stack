@@ -33,7 +33,7 @@ pub(crate) fn set_css_id_status(element_data: &mut LynxElementData, css_id: i32)
 }
 
 #[wasm_bindgen]
-pub struct MainThreadGlobalThis {
+pub struct MainThreadWasmContext {
   pub(super) tag_name_to_html_tag_map: HashMap<String, String>,
   pub(super) unique_id_to_element_map: Vec<Option<Rc<RefCell<Box<LynxElementData>>>>>,
   pub(super) timing_flags: Vec<String>,
@@ -50,7 +50,7 @@ pub struct MainThreadGlobalThis {
   pub(super) config_default_overflow_visible: bool,
 }
 
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   pub(crate) fn get_element_data_by_unique_id(
     &self,
     unique_id: usize,
@@ -63,7 +63,7 @@ impl MainThreadGlobalThis {
 }
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(constructor)]
   pub fn new(
     root_node: web_sys::Node,
@@ -72,13 +72,13 @@ impl MainThreadGlobalThis {
     config_enable_remove_css_scope: bool,
     config_default_display_linear: bool,
     config_default_overflow_visible: bool,
-  ) -> MainThreadGlobalThis {
+  ) -> MainThreadWasmContext {
     let style_manager = StyleManager::new(
       root_node.clone(),
       config_enable_css_selector,
       config_enable_remove_css_scope,
     );
-    MainThreadGlobalThis {
+    MainThreadWasmContext {
       // template,
       mts_binding,
       // element_templates_instances: HashMap::new(),
@@ -105,7 +105,7 @@ impl MainThreadGlobalThis {
 
   #[wasm_bindgen(js_name = "__CreateElementCommon")]
   pub fn create_element_common(
-    self: &mut MainThreadGlobalThis,
+    self: &mut MainThreadWasmContext,
     parent_component_unique_id: usize,
     dom: web_sys::HtmlElement,
     css_id: Option<i32>,

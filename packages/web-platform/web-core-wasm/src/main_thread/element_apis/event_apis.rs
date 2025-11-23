@@ -1,4 +1,4 @@
-use super::MainThreadGlobalThis;
+use super::MainThreadWasmContext;
 use wasm_bindgen::prelude::*;
 
 /**
@@ -15,7 +15,7 @@ pub struct EventInfo {
 }
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__AddEvent")]
   pub fn add_event(
     &mut self,
@@ -211,7 +211,7 @@ impl MainThreadGlobalThis {
  *
  *
  */
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   fn enable_event(&mut self, event_name: &str) {
     if !self.enabled_events.contains(event_name) {
       self.enabled_events.insert(event_name.to_string());

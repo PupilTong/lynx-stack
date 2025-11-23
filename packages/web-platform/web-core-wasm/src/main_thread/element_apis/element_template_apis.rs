@@ -1,4 +1,4 @@
-use super::MainThreadGlobalThis;
+use super::MainThreadWasmContext;
 use crate::constants;
 use crate::main_thread::element_apis::LynxElementData;
 use crate::template::{ElementTemplate, TemplateManager};
@@ -143,7 +143,7 @@ impl ElementTemplatesInstance {
 }
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__wasm__ElementFromBinary")]
   pub fn element_from_binary(
     &mut self,

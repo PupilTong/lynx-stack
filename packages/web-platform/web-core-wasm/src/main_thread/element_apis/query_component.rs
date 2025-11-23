@@ -1,9 +1,9 @@
-use super::MainThreadGlobalThis;
+use super::MainThreadWasmContext;
 use crate::template::TemplateManager;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-impl MainThreadGlobalThis {
+impl MainThreadWasmContext {
   #[wasm_bindgen(js_name = "__wasm_queryComponent")]
   /**
    * The wasm binding for __queryComponent
