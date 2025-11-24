@@ -1,7 +1,7 @@
 #![allow(clippy::manual_range_contains)]
-pub mod char_code_definitions;
-pub mod parse_inline_style;
-mod tokenize;
+pub(crate) mod char_code_definitions;
+pub(crate) mod parse_inline_style;
+pub(crate) mod tokenize;
 mod types;
 mod utils;
 

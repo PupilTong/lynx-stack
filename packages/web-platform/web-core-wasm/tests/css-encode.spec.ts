@@ -1,0 +1,177 @@
+import {
+  StyleInfo,
+  Rule,
+  Selector,
+  RulePrelude,
+  Declaration,
+} from '../binary/encoder.js';
+import { describe, test, expect } from 'vitest';
+import { encodeCSS } from '../ts/encode/encodeCSS.js';
+import * as CSS from '@lynx-js/css-serializer';
+
+describe('RawStyleInfo', () => {
+  test('should encode StyleRule correctly', () => {
+    const rawStyleInfo = new StyleInfo();
+
+    const rule = new Rule('StyleRule');
+
+    const selector = new Selector();
+    selector.push_one_selector_section('ClassSelector', 'foo');
+
+    const prelude = new RulePrelude();
+    prelude.push_selector(selector);
+
+    rule.set_prelude(prelude);
+
+    const declaration = new Declaration('color', 'red');
+    rule.push_declaration(declaration);
+
+    rawStyleInfo.push_rule(1, rule);
+
+    const buffer = rawStyleInfo.encode();
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should encode FontFaceRule correctly', () => {
+    const rawStyleInfo = new StyleInfo();
+    const rule = new Rule('FontFaceRule');
+
+    const declaration = new Declaration('font-family', 'MyFont');
+    rule.push_declaration(declaration);
+
+    rawStyleInfo.push_rule(1, rule);
+
+    const buffer = rawStyleInfo.encode();
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should handle imports correctly', () => {
+    const rawStyleInfo = new StyleInfo();
+    rawStyleInfo.append_import(1, 2);
+    const buffer = rawStyleInfo.encode();
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+});
+
+describe('encodeCSS', () => {
+  test('should encode basic StyleRule', () => {
+    const css = `
+      .foo {
+        color: red;
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should encode FontFaceRule', () => {
+    const css = `
+      @font-face {
+        font-family: "MyFont";
+        src: url("myfont.woff");
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should encode ImportRule', () => {
+    const css = `
+      @import "2";
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should encode KeyframesRule', () => {
+    const css = `
+      @keyframes my-animation {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should handle complex selectors', () => {
+    const css = `
+      div > .foo + #bar[attr="val"]::before:hover {
+        color: blue;
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should handle :root selector', () => {
+    const css = `
+      :root {
+        --main-color: black;
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should handle ::placeholder selector', () => {
+    const css = `
+      input::placeholder {
+        color: gray;
+      }
+    `;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    expect(buffer).toBeInstanceOf(Uint8Array);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  test('should throw error for invalid cssId', () => {
+    const css = `.foo { color: red; }`;
+    const cssMap = {
+      'invalid': CSS.parse(css).root,
+    };
+    expect(() => encodeCSS(cssMap)).toThrowError(/Invalid cssId/);
+  });
+
+  test('should throw error for invalid importCssId', () => {
+    const css = `@import "invalid";`;
+    const cssMap = {
+      '1': CSS.parse(css).root,
+    };
+    expect(() => encodeCSS(cssMap)).toThrowError(/Invalid importCssId/);
+  });
+});

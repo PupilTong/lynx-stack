@@ -2,7 +2,7 @@ use crate::template::CURRENT_VERSION;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::{ElementTemplate, StyleInfo};
+use super::StyleInfo;
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
@@ -41,7 +41,7 @@ pub(crate) struct LynxRawTemplate {
   pub(crate) card_type: DslType,
   pub(crate) page_config: PageConfig,
   pub(crate) style_info: StyleInfo,
-  pub(crate) element_templates: HashMap<String, Vec<ElementTemplate>>,
+  // pub(crate) element_templates: HashMap<String, Vec<ElementTemplate>>,
 }
 
 impl From<&js_sys::Uint8Array> for LynxRawTemplate {

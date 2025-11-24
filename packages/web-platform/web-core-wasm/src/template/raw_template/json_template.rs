@@ -1,9 +1,9 @@
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 use crate::template::{raw_template::LynxRawTemplate, PageConfig};
 
-use super::{DslType, ElementTemplate, Selector, StyleInfo, StyleRule, StyleSheet, TemplateType};
+use super::{DslType, Selector, StyleInfo, StyleRule, StyleSheet, TemplateType};
 #[derive(Deserialize)]
 pub(crate) struct JSONPageConfig {
   #[serde(rename = "enableCSSSelector")]

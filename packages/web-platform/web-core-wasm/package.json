@@ -10,6 +10,13 @@
   "license": "Apache-2.0",
   "sideEffects": true,
   "type": "module",
+  "exports": {
+    "encoder": {
+      "types": "./binary/encoder.d.ts",
+      "import": "./binary/encoder.js",
+      "default": "./binary/encoder.js"
+    }
+  },
   "main": "index.js",
   "typings": "index.d.ts",
   "files": [
@@ -31,9 +38,18 @@
     "wasm-feature-detect": "^1.8.0"
   },
   "devDependencies": {
+    "@lynx-js/css-serializer": "workspace:*",
     "binaryen": "^124.0.0",
     "fb-dotslash": "^0.5.8",
     "jsdom": "^27.2.0",
     "vite-plugin-wasm": "^3.5.0"
+  },
+  "peerDependencies": {
+    "@lynx-js/css-serializer": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@lynx-js/css-serializer": {
+      "optional": true
+    }
   }
 }

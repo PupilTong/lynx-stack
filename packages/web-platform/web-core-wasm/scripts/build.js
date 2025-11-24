@@ -42,14 +42,14 @@ function build(release, rustFlags, outName, optimizeArgs, rust_features) {
   execSync(
     `pnpm exec dotslash ./scripts/wasm-bindgen ${
       release ? '' : '--keep-debug'
-    } --out-dir dist --target bundler --out-name ${outName} ${
+    } --out-dir binary --target bundler --out-name ${outName} ${
       release ? cargoOutput : cargoOutputDebug
     }`,
     { cwd: packageRoot, stdio: 'inherit' },
   );
   if (release) {
     execSync(
-      `pnpm wasm-opt --enable-bulk-memory  ${optimizeArgs} ./dist/${outName}_bg.wasm -O4 -o ./dist/${outName}_bg.wasm`,
+      `pnpm wasm-opt --enable-bulk-memory  ${optimizeArgs} ./binary/${outName}_bg.wasm -O4 -o ./binary/${outName}_bg.wasm`,
       { cwd: packageRoot, stdio: 'inherit' },
     );
   }
@@ -68,11 +68,11 @@ function build(release, rustFlags, outName, optimizeArgs, rust_features) {
  * mutable-globals | 74 | 61 | 13.1
  */
 
-build(
-  true,
-  '-C target_feature=+bulk-memory,+sign-ext,+simd128,+reference-types,+nontrapping-fptoint,+mutable-globals',
-  'standard',
-  '--enable-bulk-memory-opt --enable-sign-ext --enable-simd --enable-reference-types --enable-nontrapping-float-to-int --enable-mutable-globals',
-);
-// build(true, '', 'encoder', '', '"encode"');
-build(false, '', 'debug', '');
+// build(
+//   true,
+//   '-C target_feature=+bulk-memory,+sign-ext,+simd128,+reference-types,+nontrapping-fptoint,+mutable-globals',
+//   'standard',
+//   '--enable-bulk-memory-opt --enable-sign-ext --enable-simd --enable-reference-types --enable-nontrapping-float-to-int --enable-mutable-globals',
+// );
+build(true, '', 'encoder', '--all-features', '"encode"');
+// build(false, '', 'debug', '');

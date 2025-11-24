@@ -1,5 +1,5 @@
-use super::super::inline_style_parser::{char_code_definitions::*, parse_inline_style::*};
 use super::rules::{get_rename_rule_value, get_replace_rule_value};
+use crate::inline_style_parser::{char_code_definitions::*, parse_inline_style::*};
 
 pub struct TransformerData<'a> {
   source: &'a str,

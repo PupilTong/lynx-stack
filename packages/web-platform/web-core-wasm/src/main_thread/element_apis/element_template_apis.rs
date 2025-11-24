@@ -1,13 +1,12 @@
 use super::MainThreadWasmContext;
 use crate::constants;
 use crate::main_thread::element_apis::LynxElementData;
-use crate::template::{ElementTemplate, TemplateManager};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
 pub(crate) struct ElementTemplatesInstance {
-  template_element: web_sys::HtmlTemplateElement,
-  lynx_elements_data: HashMap<i32, LynxElementData>,
+  template_dom: web_sys::HtmlTemplateElement,
+  lynx_elements_data: Vec<LynxElementData>,
 }
 
 impl ElementTemplatesInstance {

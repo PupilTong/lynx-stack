@@ -942,6 +942,9 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0
     devDependencies:
+      '@lynx-js/css-serializer':
+        specifier: workspace:*
+        version: link:../../tools/css-serializer
       binaryen:
         specifier: ^124.0.0
         version: 124.0.0

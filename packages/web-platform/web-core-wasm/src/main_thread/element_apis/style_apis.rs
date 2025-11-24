@@ -3,7 +3,6 @@ use super::super::style::{
 };
 use super::{set_css_id_status, MainThreadWasmContext};
 use crate::constants;
-use crate::main_thread::element_apis::element;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
