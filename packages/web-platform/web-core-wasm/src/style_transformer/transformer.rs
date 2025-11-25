@@ -197,6 +197,7 @@ impl<'a, T: Generator> StyleTransformer<'a, T> {
 
 #[cfg(test)]
 mod tests {
+  use super::Generator;
   use super::ParsedDeclaration;
 
   struct TestTransformer {
@@ -212,15 +213,22 @@ mod tests {
       &decl.property_value
     }
   }
+  impl Generator for TestTransformer {
+    fn push_transform_kids_style(&mut self, _decl: ParsedDeclaration) {
+      // TestTransformer does not need to handle kids styles
+    }
+    fn push_transformed_style(&mut self, decl: ParsedDeclaration) {
+      self.declarations.push(decl);
+    }
+  }
 
   fn parse_css(css: &str) -> (TestTransformer, &str) {
-    let declarations = super::StyleTransformer::parse(css);
-    (
-      TestTransformer {
-        declarations: declarations.transformed_styles,
-      },
-      css,
-    )
+    let mut test_transformer = TestTransformer {
+      declarations: Vec::new(),
+    };
+    let mut style_transformer = super::StyleTransformer::new(&mut test_transformer);
+    style_transformer.parse(css);
+    (test_transformer, css)
   }
 
   #[test]
