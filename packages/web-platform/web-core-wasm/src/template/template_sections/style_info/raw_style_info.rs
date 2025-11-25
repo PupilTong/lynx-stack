@@ -25,15 +25,15 @@ pub(crate) struct StyleSheet {
 #[cfg_attr(feature = "encode", derive(Serialize))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(super) struct Rule {
-  rule_type: RuleType,
-  prelude: RulePrelude,
-  declaration_block: DeclarationBlock,
-  nested_rules: Vec<Rule>,
+  pub(super) rule_type: RuleType,
+  pub(super) prelude: RulePrelude,
+  pub(super) declaration_block: DeclarationBlock,
+  pub(super) nested_rules: Vec<Rule>,
 }
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
-enum RuleType {
+pub(super) enum RuleType {
   Declaration = 1_isize,
   FontFace = 2_isize,
   KeyFrames = 3_isize,
@@ -92,23 +92,23 @@ struct Prelude {
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
-struct DeclarationBlock {
-  declarations: Vec<Declaration>,
+pub(super) struct DeclarationBlock {
+  pub(super) declarations: Vec<Declaration>,
 }
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
-struct Declaration {
-  property: String,
-  value_token_list: Vec<ValueToken>,
+pub(super) struct Declaration {
+  pub(super) property_name: String,
+  pub(super) value_token_list: Vec<ValueToken>,
 }
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
-struct ValueToken {
-  token_type: u8,
-  value: String,
+pub(super) struct ValueToken {
+  pub(super) token_type: u8,
+  pub(super) value: String,
 }
 
 #[cfg(feature = "encode")]
@@ -296,7 +296,7 @@ impl Declaration {
    * @param value - The property value.
    */
   #[cfg_attr(feature = "encode", wasm_bindgen(constructor))]
-  pub fn new(property: String, value: String) -> Self {
+  pub fn new(property_name: String, value: String) -> Self {
     let value_token_list = {
       let mut parser = DeclarationParser {
         value: value.clone(),
@@ -307,7 +307,7 @@ impl Declaration {
     };
     //take the value_token_list from parser
     Self {
-      property,
+      property_name,
       value_token_list,
     }
   }

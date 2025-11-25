@@ -10,16 +10,16 @@ use crate::css_tokenizer::{
 };
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct ParsedDeclaration {
-  pub(super) property_name: String,
-  pub(super) property_value: String,
-  pub(super) is_important: bool,
+  pub(crate) property_name: String,
+  pub(crate) property_value: String,
+  pub(crate) is_important: bool,
 }
 use super::rules::query_transform_rules;
 
 const IMPORTANT_STR: &str = "important";
 pub struct StyleTransformer {
-  pub(super) transformed_styles: Vec<ParsedDeclaration>,
-  pub(super) transformed_direct_kids_styles: Vec<ParsedDeclaration>,
+  pub(crate) transformed_styles: Vec<ParsedDeclaration>,
+  pub(crate) transformed_direct_kids_styles: Vec<ParsedDeclaration>,
 
   status: usize,
   current_property: Option<String>,
@@ -130,7 +130,7 @@ impl Parser for StyleTransformer {
   }
 }
 impl StyleTransformer {
-  pub(super) fn new() -> Self {
+  pub(crate) fn new() -> Self {
     StyleTransformer {
       transformed_styles: Vec::new(),
       transformed_direct_kids_styles: Vec::new(),

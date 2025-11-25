@@ -3,23 +3,24 @@
  * Licensed under the Apache License Version 2.0 that can be found in the
  * LICENSE file in the root directory of this source tree.
 */
-use super::transformer::StyleTransformer;
-use super::ParsedDeclaration;
+use super::raw_style_info::DeclarationBlock;
 use crate::css_tokenizer::token_types::{COLON_TOKEN, IDENT_TOKEN, SEMICOLON_TOKEN};
 use crate::css_tokenizer::tokenize::Parser;
+use crate::style_transformer::ParsedDeclaration;
+use crate::style_transformer::StyleTransformer;
 
-pub(crate) fn transform_declarations_block(
-  declarations: Vec<(&str, &[(u8, &str)])>,
+pub(crate) fn transform_one_declaration(
+  declarations: &DeclarationBlock,
 ) -> (Vec<ParsedDeclaration>, Vec<ParsedDeclaration>) {
   let mut transformer = StyleTransformer::new();
-  for (property_name, property_value) in declarations {
+  for declaration in declarations.declarations.iter() {
     // Feed property name
-    transformer.on_token(IDENT_TOKEN, property_name);
+    transformer.on_token(IDENT_TOKEN, declaration.property_name.as_str());
     // Feed colon
     transformer.on_token(COLON_TOKEN, ":");
     // Feed property value tokens
-    for (token_type, token_value) in property_value {
-      transformer.on_token(*token_type, token_value);
+    for token in declaration.value_token_list.iter() {
+      transformer.on_token(token.token_type, token.value.as_str());
     }
     // Feed semicolon
     transformer.on_token(SEMICOLON_TOKEN, ";");
@@ -32,14 +33,34 @@ pub(crate) fn transform_declarations_block(
 
 #[cfg(test)]
 mod tests {
+  use super::super::raw_style_info::{Declaration, ValueToken};
   use super::*;
   use crate::css_tokenizer::token_types::*;
 
+  fn make_declarations(input: Vec<(&str, &[(u8, &str)])>) -> DeclarationBlock {
+    DeclarationBlock {
+      declarations: input
+        .into_iter()
+        .map(|(k, v)| Declaration {
+          property_name: k.to_string(),
+          value_token_list: v
+            .iter()
+            .map(|(t, s)| ValueToken {
+              token_type: *t,
+              value: s.to_string(),
+            })
+            .collect(),
+        })
+        .collect(),
+    }
+  }
+
   #[test]
-  fn test_transform_declarations_block_basic() {
+  fn test_transform_one_declaration_basic() {
     let tokens = vec![(IDENT_TOKEN, "red")];
     let declarations = vec![("color", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 4);
     // color: red -> --lynx-text-bg-color: initial; -webkit-background-clip: initial; background-clip: initial; color: red;
     assert_eq!(styles[0].property_name, "--lynx-text-bg-color");
@@ -50,14 +71,15 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_multiple() {
+  fn test_transform_one_declaration_multiple() {
     let width_tokens = vec![(DIMENSION_TOKEN, "100px")];
     let height_tokens = vec![(DIMENSION_TOKEN, "200px")];
     let declarations = vec![
       ("width", width_tokens.as_slice()),
       ("height", height_tokens.as_slice()),
     ];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 2);
     assert_eq!(styles[0].property_name, "width");
     assert_eq!(styles[0].property_value, "100px");
@@ -67,10 +89,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_rename() {
+  fn test_transform_one_declaration_rename() {
     let tokens = vec![(IDENT_TOKEN, "row")];
     let declarations = vec![("flex-direction", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 1);
     assert_eq!(styles[0].property_name, "--flex-direction");
     assert_eq!(styles[0].property_value, "row");
@@ -78,10 +101,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_replace() {
+  fn test_transform_one_declaration_replace() {
     let tokens = vec![(IDENT_TOKEN, "linear")];
     let declarations = vec![("display", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 3);
     assert_eq!(styles[0].property_name, "--lynx-display-toggle");
     assert_eq!(styles[0].property_value, "var(--lynx-display-linear)");
@@ -93,7 +117,7 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_color_gradient() {
+  fn test_transform_one_declaration_color_gradient() {
     let tokens = vec![
       (FUNCTION_TOKEN, "linear-gradient("),
       (IDENT_TOKEN, "red"),
@@ -102,7 +126,8 @@ mod tests {
       (RIGHT_PARENTHESES_TOKEN, ")"),
     ];
     let declarations = vec![("color", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 4);
     assert_eq!(styles[0].property_name, "color");
     assert_eq!(styles[0].property_value, "transparent");
@@ -112,10 +137,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_flex() {
+  fn test_transform_one_declaration_flex() {
     let tokens = vec![(NUMBER_TOKEN, "1")];
     let declarations = vec![("flex", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 3);
     assert_eq!(styles[0].property_name, "--flex-grow");
     assert_eq!(styles[0].property_value, "1");
@@ -127,10 +153,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_linear_weight() {
+  fn test_transform_one_declaration_linear_weight() {
     let tokens = vec![(NUMBER_TOKEN, "1")];
     let declarations = vec![("linear-weight", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 2);
     assert_eq!(styles[0].property_name, "--lynx-linear-weight");
     assert_eq!(styles[0].property_value, "1");
@@ -140,10 +167,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_linear_weight_sum() {
+  fn test_transform_one_declaration_linear_weight_sum() {
     let tokens = vec![(NUMBER_TOKEN, "1")];
     let declarations = vec![("linear-weight-sum", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 1);
     assert_eq!(styles[0].property_name, "linear-weight-sum");
     assert_eq!(styles[0].property_value, "1");
@@ -153,7 +181,7 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_important() {
+  fn test_transform_one_declaration_important() {
     let tokens = vec![
       (IDENT_TOKEN, "red"),
       (WHITESPACE_TOKEN, " "),
@@ -161,7 +189,8 @@ mod tests {
       (IDENT_TOKEN, "important"),
     ];
     let declarations = vec![("color", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 4);
     assert_eq!(styles[3].property_name, "color");
     assert_eq!(styles[3].property_value, "red");
@@ -170,10 +199,11 @@ mod tests {
   }
 
   #[test]
-  fn test_transform_declarations_block_rpx() {
+  fn test_transform_one_declaration_rpx() {
     let tokens = vec![(DIMENSION_TOKEN, "100rpx")];
     let declarations = vec![("width", tokens.as_slice())];
-    let (styles, kids) = transform_declarations_block(declarations);
+    let block = make_declarations(declarations);
+    let (styles, kids) = transform_one_declaration(&block);
     assert_eq!(styles.len(), 1);
     assert_eq!(styles[0].property_name, "width");
     assert_eq!(styles[0].property_value, "calc(100 * var(--rpx-unit))");

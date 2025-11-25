@@ -13,14 +13,14 @@ type CssOgCssIdToClassSelectorNameToDeclarationsMap =
   HashMap<i32, CssOgClassSelectorNameToDeclarationsMap>;
 
 #[derive(Default)]
-struct FlattenedStyleSheet {
-  imported_by: Vec<i32>,
-  rules: Vec<Rule>,
+pub(super) struct FlattenedStyleSheet {
+  pub(super) imported_by: Vec<i32>,
+  pub(super) rules: Vec<Rule>,
 }
 
 #[derive(Default)]
-struct FlattenedStyleInfo {
-  css_id_to_style_sheet: HashMap<i32, FlattenedStyleSheet>,
+pub(super) struct FlattenedStyleInfo {
+  pub(super) css_id_to_style_sheet: HashMap<i32, FlattenedStyleSheet>,
 }
 
 impl From<StyleInfo> for FlattenedStyleInfo {
