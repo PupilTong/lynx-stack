@@ -88,9 +88,9 @@ pub const fn is_valid_escape(first: u8, second: u8) -> bool {
 
 // Check for Byte Order Mark
 #[inline(always)]
-pub fn get_start_offset(source: &[u8]) -> usize {
-  let bom = "\u{FEFF}".as_bytes();
-  let bom_le = "\u{FFFE}".as_bytes();
+pub fn get_start_offset(source: &str) -> usize {
+  let bom = "\u{FEFF}";
+  let bom_le = "\u{FFFE}";
   if bom.len() < source.len()
     && (&source[0..bom.len()] == bom || &source[0..bom_le.len()] == bom_le)
   {
@@ -158,36 +158,24 @@ pub fn char_code_category(char_code: u8) -> u8 {
 }
 
 #[inline(always)]
-pub fn cmp_char(
-  test_str: &[u8],
-  test_str_length: usize,
-  offset: usize,
-  reference_code: u8,
-) -> usize {
-  if offset < test_str_length {
-    let code = test_str[offset];
-    // code.toLowerCase() for A..Z
-    if code == reference_code || (is_uppercase_letter(code) && ((code | 32) == reference_code)) {
-      1usize //true
-    } else {
-      0usize //false
-    }
-  } else {
-    0usize //false
+pub fn cmp_char(test_str: &str, offset: usize, reference_code: u8) -> bool {
+  if offset >= test_str.len() {
+    return false;
   }
+  test_str.as_bytes()[offset].eq_ignore_ascii_case(&reference_code)
 }
 
 #[inline(always)]
-pub fn get_char_code(source: &[u8], offset: usize) -> u8 {
+pub fn get_char_code(source: &str, offset: usize) -> u8 {
   if offset < source.len() {
-    source[offset]
+    source.as_bytes()[offset]
   } else {
     0 // EOF
   }
 }
 
 #[inline(always)]
-pub fn get_new_line_length(source: &[u8], offset: usize, code: u8) -> usize {
+pub fn get_new_line_length(source: &str, offset: usize, code: u8) -> usize {
   if code == 13 /* \r */ && get_char_code(source, offset + 1) == 10
   /* \n */
   {

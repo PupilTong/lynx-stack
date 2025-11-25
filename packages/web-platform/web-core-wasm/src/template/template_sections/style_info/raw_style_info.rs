@@ -1,4 +1,4 @@
-use crate::inline_style_parser::tokenize;
+use crate::css_tokenizer::tokenize;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
@@ -270,10 +270,10 @@ struct DeclarationParser {
 
 #[cfg(feature = "encode")]
 impl tokenize::Parser for DeclarationParser {
-  fn on_token(&mut self, token_type: u8, start_index: usize, end: usize) {
+  fn on_token(&mut self, token_type: u8, token_value: &str) {
     let value_token = ValueToken {
       token_type,
-      value: self.value[start_index..end].to_string(),
+      value: token_value.to_string(),
     };
     self.value_token_list.push(value_token);
   }
@@ -302,8 +302,7 @@ impl Declaration {
         value: value.clone(),
         value_token_list: vec![],
       };
-      let value_bytes = value.as_bytes();
-      tokenize::tokenize(value_bytes, &mut parser);
+      tokenize::tokenize(&value, &mut parser);
       parser.take_token_list()
     };
     //take the value_token_list from parser

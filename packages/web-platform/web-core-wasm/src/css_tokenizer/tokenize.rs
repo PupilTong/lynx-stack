@@ -1,6 +1,6 @@
 use super::{
   char_code_definitions::{self, *},
-  types::*,
+  token_types::*,
   utils::*,
 };
 
@@ -9,7 +9,7 @@ use super::{
  */
 
 // § 4.3.3. Consume a numeric token
-pub fn consume_numeric_token(source: &[u8], offset: &mut usize, token_type: &mut u8) {
+pub fn consume_numeric_token(source: &str, offset: &mut usize, token_type: &mut u8) {
   // Consume a number and let number be the result.
   *offset = consume_number(source, *offset);
 
@@ -40,15 +40,14 @@ pub fn consume_numeric_token(source: &[u8], offset: &mut usize, token_type: &mut
 }
 
 // § 4.3.4. Consume an ident-like token
-pub fn consume_ident_like_token(source: &[u8], offset: &mut usize, token_type: &mut u8) {
+pub fn consume_ident_like_token(source: &str, offset: &mut usize, token_type: &mut u8) {
   let name_start_offset = *offset;
   // Consume a name, and let string be the result.
   *offset = consume_name(source, *offset);
 
   // If string’s value is an ASCII case-insensitive match for "url",
   // and the next input code point is U+0028 LEFT PARENTHESIS ((), consume it.
-  if cmp_str(source, name_start_offset, *offset, "url".as_bytes())
-    && get_char_code(source, *offset) == 0x0028
+  if cmp_str(source, name_start_offset, *offset, "url") && get_char_code(source, *offset) == 0x0028
   {
     // While the next two input code points are whitespace, consume the next input code point.
     *offset = find_white_space_end(source, (*offset) + 1);
@@ -80,7 +79,7 @@ pub fn consume_ident_like_token(source: &[u8], offset: &mut usize, token_type: &
 }
 
 pub fn consume_string_token(
-  source: &[u8],
+  source: &str,
   ending_code_point: u8,
   offset: &mut usize,
   token_type: &mut u8,
@@ -159,7 +158,7 @@ pub fn consume_string_token(
 // This algorithm also assumes that it’s being called to consume an "unquoted" value, like url(foo).
 // A quoted value, like url("foo"), is parsed as a <function-token>. Consume an ident-like token
 // automatically handles this distinction; this algorithm shouldn’t be called directly otherwise.
-pub fn consume_url_token(source: &[u8], offset: &mut usize, token_type: &mut u8) {
+pub fn consume_url_token(source: &str, offset: &mut usize, token_type: &mut u8) {
   let source_length = source.len();
   // Initially create a <url-token> with its value set to the empty string.
   *token_type = URL_TOKEN;
@@ -247,10 +246,10 @@ pub fn consume_url_token(source: &[u8], offset: &mut usize, token_type: &mut u8)
 }
 
 pub trait Parser {
-  fn on_token(&mut self, token_type: u8, start: usize, end: usize);
+  fn on_token(&mut self, token_type: u8, value: &str);
 }
 
-pub fn tokenize<T: Parser>(source: &[u8], parser: &mut T) {
+pub fn tokenize<T: Parser>(source: &str, parser: &mut T) {
   let source_length = source.len();
   let mut start: usize = get_start_offset(source);
   let mut offset = start;
@@ -532,7 +531,7 @@ pub fn tokenize<T: Parser>(source: &[u8], parser: &mut T) {
         offset += 1;
       }
     }
-    parser.on_token(token_type, start, offset);
+    parser.on_token(token_type, &source[start..offset]);
     start = offset;
   }
 }
@@ -542,7 +541,7 @@ mod test {
   use super::*;
 
   struct TokenStreamRecorder {
-    tokens: Vec<(u8, usize, usize)>,
+    tokens: Vec<(u8, String)>,
   }
   impl TokenStreamRecorder {
     fn new() -> Self {
@@ -550,14 +549,14 @@ mod test {
     }
   }
   impl Parser for TokenStreamRecorder {
-    fn on_token(&mut self, token_type: u8, start: usize, end: usize) {
-      self.tokens.push((token_type, start, end));
+    fn on_token(&mut self, token_type: u8, value: &str) {
+      self.tokens.push((token_type, value.to_string()));
     }
   }
 
   #[test]
   fn test_bom_0() {
-    let source = "\u{FEFF}".as_bytes();
+    let source = "\u{FEFF}";
     let mut parser = TokenStreamRecorder::new();
     tokenize(source, &mut parser);
     assert_eq!(parser.tokens.len(), 1);
@@ -565,17 +564,23 @@ mod test {
 
   #[test]
   fn test_bom_1() {
-    let source = "\u{FEFF}@a;".as_bytes();
+    let source = "\u{FEFF}@a;";
     let mut parser = TokenStreamRecorder::new();
     tokenize(source, &mut parser);
-    assert_eq!(parser.tokens, [(3, 3, 5), (17, 5, 6),])
+    assert_eq!(
+      parser.tokens,
+      vec![(3, "@a".to_string()), (17, ";".to_string())]
+    );
   }
 
   #[test]
   fn test_bom_le() {
-    let source = "\u{FFFE}@a;".as_bytes();
+    let source = "\u{FFFE}@a;";
     let mut parser = TokenStreamRecorder::new();
     tokenize(source, &mut parser);
-    assert_eq!(parser.tokens, [(3, 3, 5), (17, 5, 6),]);
+    assert_eq!(
+      parser.tokens,
+      vec![(3, "@a".to_string()), (17, ";".to_string())]
+    );
   }
 }
