@@ -1,23 +1,29 @@
+use crate::style_transformer::transformer::{self, Generator};
+
 /*
  * Copyright 2025 The Lynx Authors. All rights reserved.
  * Licensed under the Apache License Version 2.0 that can be found in the
  * LICENSE file in the root directory of this source tree.
  */
-use super::transformer::StyleTransformer;
-
-pub(crate) fn transform_inline_style_string(source: &str) -> String {
-  let declarations = StyleTransformer::parse(source).transformed_styles;
-  let mut string_buffer = String::with_capacity(source.len() + 8 * declarations.len());
-  for declaration in &declarations {
-    string_buffer.push_str(&declaration.property_name);
-    string_buffer.push(':');
-    string_buffer.push_str(&declaration.property_value);
-    if declaration.is_important {
-      string_buffer.push_str(" !important");
-    }
-    string_buffer.push(';');
+use super::{transformer::StyleTransformer, ParsedDeclaration};
+struct InlineStyleGenerator {
+  string_buffer: String,
+}
+impl Generator for InlineStyleGenerator {
+  fn push_transform_kids_style(&mut self, declaration: ParsedDeclaration) {
+    // do nothing
   }
-  string_buffer
+  fn push_transformed_style(&mut self, declaration: ParsedDeclaration) {
+    declaration.push_string_buf(&mut self.string_buffer);
+  }
+}
+pub(crate) fn transform_inline_style_string(source: &str) -> String {
+  let mut generator = InlineStyleGenerator {
+    string_buffer: String::with_capacity(source.len() + 16),
+  };
+  let transformer = &mut StyleTransformer::new(&mut generator);
+  transformer.parse(source);
+  generator.string_buffer
 }
 
 #[cfg(test)]

@@ -14,12 +14,24 @@ pub(crate) struct ParsedDeclaration {
   pub(crate) property_value: String,
   pub(crate) is_important: bool,
 }
+
+impl ParsedDeclaration {
+  pub(crate) fn push_string_buf(&self, string_buffer: &mut String) {
+    string_buffer.push_str(&self.property_name);
+    string_buffer.push(':');
+    string_buffer.push_str(&self.property_value);
+    if self.is_important {
+      string_buffer.push_str(" !important");
+    }
+    string_buffer.push(';');
+  }
+}
+
 use super::rules::query_transform_rules;
 
 const IMPORTANT_STR: &str = "important";
-pub struct StyleTransformer {
-  pub(crate) transformed_styles: Vec<ParsedDeclaration>,
-  pub(crate) transformed_direct_kids_styles: Vec<ParsedDeclaration>,
+pub struct StyleTransformer<'a, T: Generator> {
+  generator: &'a mut T,
 
   status: usize,
   current_property: Option<String>,
@@ -28,7 +40,12 @@ pub struct StyleTransformer {
   prev_token_type: u8,
 }
 
-impl Parser for StyleTransformer {
+pub(crate) trait Generator {
+  fn push_transformed_style(&mut self, declaration: ParsedDeclaration);
+  fn push_transform_kids_style(&mut self, declaration: ParsedDeclaration);
+}
+
+impl<'a, T: Generator> Parser for StyleTransformer<'a, T> {
   fn on_token(&mut self, token_type: u8, token_value: &str) {
     let (token_type, token_value) =
       super::token_transformer::transform_one_token(token_type, token_value);
@@ -129,11 +146,10 @@ impl Parser for StyleTransformer {
     self.prev_token_type = token_type;
   }
 }
-impl StyleTransformer {
-  pub(crate) fn new() -> Self {
+impl<'a, T: Generator> StyleTransformer<'a, T> {
+  pub(crate) fn new(generator: &'a mut T) -> Self {
     StyleTransformer {
-      transformed_styles: Vec::new(),
-      transformed_direct_kids_styles: Vec::new(),
+      generator,
       status: 0,
       current_property: None,
       current_value: String::with_capacity(8),
@@ -142,61 +158,40 @@ impl StyleTransformer {
     }
   }
 
-  pub(crate) fn parse(source: &str) -> Self {
-    let mut parser = StyleTransformer {
-      status: 0,
-      current_property: None,
-      current_value: String::with_capacity(8),
-      is_important: false,
-      prev_token_type: WHITESPACE_TOKEN, // start with whitespace
-      transformed_styles: Vec::new(),
-      transformed_direct_kids_styles: Vec::new(),
-    };
-    tokenize::tokenize(source, &mut parser);
-    if parser.prev_token_type != SEMICOLON_TOKEN {
-      parser.on_token(SEMICOLON_TOKEN, ";");
+  pub(crate) fn parse(&mut self, source: &str) {
+    tokenize::tokenize(source, self);
+    if self.prev_token_type != SEMICOLON_TOKEN {
+      self.on_token(SEMICOLON_TOKEN, ";");
     }
-    parser
   }
 
   fn on_declaration_parsed(&mut self, declaration: ParsedDeclaration) {
-    let (replace, kids) = {
+    let empty: bool = {
       let (current_declarations, kids_declarations) =
         query_transform_rules(&declaration.property_name, &declaration.property_value);
-
-      let replace = if current_declarations.is_empty() {
-        None
-      } else {
-        Some(
-          current_declarations
-            .into_iter()
-            .map(|(name, value)| ParsedDeclaration {
-              property_name: name.to_string(),
-              property_value: value.to_string(),
-              is_important: declaration.is_important,
-            })
-            .collect::<Vec<_>>(),
-        )
-      };
-
-      let kids = kids_declarations
-        .into_iter()
-        .map(|(name, value)| ParsedDeclaration {
+      for (name, value) in kids_declarations.into_iter() {
+        self.generator.push_transform_kids_style(ParsedDeclaration {
           property_name: name.to_string(),
           property_value: value.to_string(),
           is_important: declaration.is_important,
-        })
-        .collect::<Vec<_>>();
-
-      (replace, kids)
+        });
+      }
+      if current_declarations.is_empty() {
+        true
+      } else {
+        for (name, value) in current_declarations.into_iter() {
+          self.generator.push_transformed_style(ParsedDeclaration {
+            property_name: name.to_string(),
+            property_value: value.to_string(),
+            is_important: declaration.is_important,
+          });
+        }
+        false
+      }
     };
-
-    if let Some(replacements) = replace {
-      self.transformed_styles.extend(replacements);
-    } else {
-      self.transformed_styles.push(declaration);
+    if empty {
+      self.generator.push_transformed_style(declaration);
     }
-    self.transformed_direct_kids_styles.extend(kids);
   }
 }
 
