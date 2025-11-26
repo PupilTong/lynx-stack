@@ -3,7 +3,7 @@
  * Licensed under the Apache License Version 2.0 that can be found in the
  * LICENSE file in the root directory of this source tree.
 */
-use super::decoded_style_info::FlattenedStyleInfo;
+use super::flattened_style_info::FlattenedStyleInfo;
 use super::raw_style_info::{DeclarationBlock, Rule, RuleType};
 use crate::css_tokenizer::token_types::{COLON_TOKEN, IDENT_TOKEN, SEMICOLON_TOKEN};
 use crate::css_tokenizer::tokenize::Parser;

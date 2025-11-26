@@ -12,6 +12,7 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(crate) struct StyleInfo {
   pub(super) css_id_to_style_sheet: HashMap<i32, StyleSheet>,
+  pub(super) style_content_str_size_hint: usize,
 }
 
 #[derive(Deserialize)]
@@ -31,7 +32,7 @@ pub(super) struct Rule {
   pub(super) nested_rules: Vec<Rule>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, PartialEq)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 pub(super) enum RuleType {
   Declaration = 1_isize,
@@ -49,20 +50,20 @@ pub(super) enum RuleType {
  * If it is KeyFramesPrelude, then selectors has only one selector which is Prelude text, its selector_sections is empty
  * If the parent is FontFace, then selectors is empty
  */
-struct RulePrelude {
-  selectors: Vec<Selector>,
+pub(super) struct RulePrelude {
+  pub(super) selectors: Vec<Selector>,
 }
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
-struct Selector {
-  selector_sections: Vec<SelectorSection>,
+pub(super) struct Selector {
+  pub(super) selector_sections: Vec<SelectorSection>,
 }
 
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
-struct SelectorSection {
+pub(super) struct SelectorSection {
   section_type: SelectorSectionType,
   value: String,
 }
@@ -118,6 +119,7 @@ impl StyleInfo {
   pub fn new() -> Self {
     Self {
       css_id_to_style_sheet: HashMap::new(),
+      style_content_str_size_hint: 0,
     }
   }
 
