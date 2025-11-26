@@ -47,7 +47,7 @@ pub(super) enum RuleType {
  * Either SelectorList or KeyFramesPrelude
  * Depending on the RuleType
  * If it is SelectorList, then selectors is a list of Selector
- * If it is KeyFramesPrelude, then selectors has only one selector which is Prelude text, its selector_sections is empty
+ * If it is KeyFramesPrelude, then selectors has only one selector which is Prelude text, its simple_selectors is empty
  * If the parent is FontFace, then selectors is empty
  */
 pub(super) struct RulePrelude {
@@ -58,22 +58,22 @@ pub(super) struct RulePrelude {
 #[cfg_attr(feature = "encode", derive(Serialize))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(super) struct Selector {
-  pub(super) selector_sections: Vec<SelectorSection>,
+  pub(super) simple_selectors: Vec<OneSimpleSelector>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, PartialEq)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
-pub(super) struct SelectorSection {
-  section_type: SelectorSectionType,
-  value: String,
+pub(super) struct OneSimpleSelector {
+  pub(super) section_type: OneSimpleSelectorType,
+  pub(super) value: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, PartialEq)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 /**
- * All possible SelectorSection types
+ * All possible OneSimpleSelector types
  */
-enum SelectorSectionType {
+pub(super) enum OneSimpleSelectorType {
   ClassSelector = 1_isize,
   IdSelector = 2_isize,
   AttributeSelector = 3_isize,
@@ -233,7 +233,7 @@ impl Selector {
   #[cfg_attr(feature = "encode", wasm_bindgen(constructor))]
   pub fn new() -> Self {
     Self {
-      selector_sections: vec![],
+      simple_selectors: vec![],
     }
   }
 
@@ -245,22 +245,22 @@ impl Selector {
   #[cfg_attr(feature = "encode", wasm_bindgen)]
   pub fn push_one_selector_section(&mut self, selector_type: String, value: String) {
     let selector_section_type = match selector_type.as_str() {
-      "ClassSelector" => SelectorSectionType::ClassSelector,
-      "IdSelector" => SelectorSectionType::IdSelector,
-      "AttributeSelector" => SelectorSectionType::AttributeSelector,
-      "TypeSelector" => SelectorSectionType::TypeSelector,
-      "Combinator" => SelectorSectionType::Combinator,
-      "PseudoClassSelector" => SelectorSectionType::PseudoClassSelector,
-      "PseudoElementSelector" => SelectorSectionType::PseudoElementSelector,
-      "UniversalSelector" => SelectorSectionType::UniversalSelector,
-      "UnknownText" => SelectorSectionType::UnknownText,
+      "ClassSelector" => OneSimpleSelectorType::ClassSelector,
+      "IdSelector" => OneSimpleSelectorType::IdSelector,
+      "AttributeSelector" => OneSimpleSelectorType::AttributeSelector,
+      "TypeSelector" => OneSimpleSelectorType::TypeSelector,
+      "Combinator" => OneSimpleSelectorType::Combinator,
+      "PseudoClassSelector" => OneSimpleSelectorType::PseudoClassSelector,
+      "PseudoElementSelector" => OneSimpleSelectorType::PseudoElementSelector,
+      "UniversalSelector" => OneSimpleSelectorType::UniversalSelector,
+      "UnknownText" => OneSimpleSelectorType::UnknownText,
       _ => panic!("Unknown selector section type: {selector_type}"),
     };
-    let selector_section = SelectorSection {
+    let selector_section = OneSimpleSelector {
       section_type: selector_section_type,
       value,
     };
-    self.selector_sections.push(selector_section);
+    self.simple_selectors.push(selector_section);
   }
 }
 

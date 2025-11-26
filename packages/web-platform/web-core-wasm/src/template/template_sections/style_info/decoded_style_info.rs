@@ -9,9 +9,10 @@ use super::raw_style_info::{Rule, RulePrelude, RuleType};
 use crate::style_transformer::{Generator, ParsedDeclaration};
 use crate::template::template_sections::style_info::decoded_style_info;
 use crate::template::template_sections::style_info::raw_style_info::{
-  Declaration, DeclarationBlock,
+  Declaration, DeclarationBlock, OneSimpleSelector, OneSimpleSelectorType,
 };
 use std::collections::HashMap;
+use std::fmt::format;
 use wasm_bindgen::prelude::*;
 
 type CssOgClassSelectorNameToDeclarationsMap = HashMap<String, String>;
@@ -27,13 +28,16 @@ struct DecodedStyleInfo {
     Option<CssOgCssIdToClassSelectorNameToDeclarationsMap>,
   config_enable_css_selector: bool,
   config_remove_css_scope: bool,
+  processing_css_id: i32,
   current_processing_prelude: Option<RulePrelude>,
+  put_declaration_into_css_og_map: bool,
   entry_name: Option<String>,
 }
 
 impl DecodedStyleInfo {
   fn new(
     flattened_style_info: FlattenedStyleInfo,
+    entry_name: Option<String>,
     config_enable_css_selector: bool,
     config_remove_css_scope: bool,
   ) -> Self {
@@ -45,6 +49,7 @@ impl DecodedStyleInfo {
       } else {
         None
       },
+      entry_name,
       current_processing_prelude: None,
       config_enable_css_selector,
       config_remove_css_scope,
@@ -72,6 +77,53 @@ impl DecodedStyleInfo {
                6 if the self.entryName is Some, we should add a [{constants::LYNX_CSS_ENTRY_NAME_ATTRIBUTE}="{entry_name}"] to the front of the current compound selector
                    otherwise, we should add a :not({constants::LYNX_CSS_ENTRY_NAME_ATTRIBUTE}) just before the first pseudo class or pseudo element in the current compound selector
               */
+              for mut index in 0..selector.simple_selectors.len() {
+                let simple_selector = &mut selector.simple_selectors[index];
+                if simple_selector.section_type == OneSimpleSelectorType::PseudoClassSelector
+                  && simple_selector.value == "root"
+                {
+                  // transform :root to [lynx-tag="page"]
+                  simple_selector.section_type = OneSimpleSelectorType::AttributeSelector;
+                  simple_selector.value =
+                    format!("[{}=\"page\"]", crate::constants::LYNX_TAG_ATTRIBUTE);
+                  // find the position to insert
+                  let mut compond_selector_start_index = index;
+                  while compond_selector_start_index > 0 {
+                    let prev_simple_selector =
+                      &selector.simple_selectors[compond_selector_start_index - 1];
+                    if prev_simple_selector.section_type == OneSimpleSelectorType::Combinator {
+                      break;
+                    }
+                    compond_selector_start_index -= 1;
+                  }
+                  // move the current simple selector to the compond selector start index
+                  let root_simple_selector = selector.simple_selectors.remove(index);
+                  selector
+                    .simple_selectors
+                    .insert(compond_selector_start_index, root_simple_selector);
+                } else if simple_selector.section_type
+                  == OneSimpleSelectorType::PseudoElementSelector
+                  && simple_selector.value == "placeholder"
+                {
+                  // transform ::placeholder to ::part(placeholder)::placeholder
+                  selector.simple_selectors.insert(
+                    index,
+                    OneSimpleSelector {
+                      section_type: OneSimpleSelectorType::PseudoElementSelector,
+                      value: "::part(placeholder)".to_string(),
+                    },
+                  );
+                  index += 1; // skip the newly inserted simple selector
+                } else if simple_selector.section_type == OneSimpleSelectorType::TypeSelector {
+                  // transform type selector to [lynx-tag="type"]
+                  simple_selector.section_type = OneSimpleSelectorType::AttributeSelector;
+                  simple_selector.value = format!(
+                    "[{}=\"{}\"]",
+                    crate::constants::LYNX_TAG_ATTRIBUTE,
+                    simple_selector.value
+                  );
+                }
+              }
             }
           }
           RuleType::FontFace => {
