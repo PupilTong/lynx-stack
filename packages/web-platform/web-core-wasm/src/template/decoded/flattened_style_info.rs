@@ -192,11 +192,11 @@ mod tests {
     assert_eq!(flattened_sheet.rules.len(), 1);
 
     let rule = &flattened_sheet.rules[0];
-    assert_eq!(rule.selectors.len(), 1);
-    assert_eq!(rule.selectors[0][0].0, vec!["div"]);
-    assert_eq!(rule.selectors[0][0].1, vec![":hover"]);
-    assert_eq!(rule.selectors[0][0].2, vec!["::before"]);
-    assert_eq!(rule.selectors[0][0].3, vec![">"]);
+    assert_eq!(rule.selector_list.len(), 1);
+    assert_eq!(rule.selector_list[0][0].0, vec!["div"]);
+    assert_eq!(rule.selector_list[0][0].1, vec![":hover"]);
+    assert_eq!(rule.selector_list[0][0].2, vec!["::before"]);
+    assert_eq!(rule.selector_list[0][0].3, vec![">"]);
     assert_eq!(
       rule.declarations,
       vec![("color".to_string(), "red".to_string())]
@@ -399,13 +399,13 @@ mod tests {
 
     // Test first rule
     let rule = &flattened_sheet_1.rules[0];
-    assert_eq!(rule.selectors.len(), 2);
-    assert_eq!(rule.selectors[0][0].0, vec!["h1", "h2"]);
-    assert_eq!(rule.selectors[0][0].1, vec![":hover"]);
-    assert_eq!(rule.selectors[1][0].0, vec!["p"]);
-    assert_eq!(rule.selectors[1][0].1, vec![":active", ":focus"]);
-    assert_eq!(rule.selectors[1][0].2, vec!["::after"]);
-    assert_eq!(rule.selectors[1][0].3, vec!["+", "~"]);
+    assert_eq!(rule.selector_list.len(), 2);
+    assert_eq!(rule.selector_list[0][0].0, vec!["h1", "h2"]);
+    assert_eq!(rule.selector_list[0][0].1, vec![":hover"]);
+    assert_eq!(rule.selector_list[1][0].0, vec!["p"]);
+    assert_eq!(rule.selector_list[1][0].1, vec![":active", ":focus"]);
+    assert_eq!(rule.selector_list[1][0].2, vec!["::after"]);
+    assert_eq!(rule.selector_list[1][0].3, vec!["+", "~"]);
     assert_eq!(
       rule.declarations,
       vec![
@@ -416,10 +416,10 @@ mod tests {
 
     // Test second rule
     let rule2_found = &flattened_sheet_1.rules[1];
-    assert_eq!(rule2_found.selectors.len(), 1);
-    assert_eq!(rule2_found.selectors[0][0].0, vec!["span"]);
-    assert_eq!(rule2_found.selectors[0][0].2, vec!["::before"]);
-    assert_eq!(rule2_found.selectors[0][0].3, vec![">"]);
+    assert_eq!(rule2_found.selector_list.len(), 1);
+    assert_eq!(rule2_found.selector_list[0][0].0, vec!["span"]);
+    assert_eq!(rule2_found.selector_list[0][0].2, vec!["::before"]);
+    assert_eq!(rule2_found.selector_list[0][0].3, vec![">"]);
     assert_eq!(
       rule2_found.declarations,
       vec![("margin".to_string(), "10px".to_string())]

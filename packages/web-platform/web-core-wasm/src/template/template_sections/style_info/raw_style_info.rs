@@ -51,7 +51,7 @@ pub(super) enum RuleType {
  * If the parent is FontFace, then selectors is empty
  */
 pub(super) struct RulePrelude {
-  pub(super) selectors: Vec<Selector>,
+  pub(super) selector_list: Vec<Selector>,
 }
 
 #[derive(Deserialize)]
@@ -64,7 +64,7 @@ pub(super) struct Selector {
 #[derive(Deserialize, PartialEq)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 pub(super) struct OneSimpleSelector {
-  pub(super) section_type: OneSimpleSelectorType,
+  pub(super) selector_type: OneSimpleSelectorType,
   pub(super) value: String,
 }
 
@@ -175,7 +175,9 @@ impl Rule {
     };
     Rule {
       rule_type: rule_type_enum,
-      prelude: RulePrelude { selectors: vec![] },
+      prelude: RulePrelude {
+        selector_list: vec![],
+      },
       declaration_block: DeclarationBlock {
         declarations: vec![],
       },
@@ -215,7 +217,9 @@ impl Rule {
 impl RulePrelude {
   #[cfg_attr(feature = "encode", wasm_bindgen(constructor))]
   pub fn new() -> Self {
-    Self { selectors: vec![] }
+    Self {
+      selector_list: vec![],
+    }
   }
 
   /**
@@ -224,7 +228,7 @@ impl RulePrelude {
    */
   #[cfg_attr(feature = "encode", wasm_bindgen)]
   pub fn push_selector(&mut self, selector: Selector) {
-    self.selectors.push(selector);
+    self.selector_list.push(selector);
   }
 }
 
@@ -244,7 +248,7 @@ impl Selector {
    */
   #[cfg_attr(feature = "encode", wasm_bindgen)]
   pub fn push_one_selector_section(&mut self, selector_type: String, value: String) {
-    let selector_section_type = match selector_type.as_str() {
+    let selector_selector_type = match selector_type.as_str() {
       "ClassSelector" => OneSimpleSelectorType::ClassSelector,
       "IdSelector" => OneSimpleSelectorType::IdSelector,
       "AttributeSelector" => OneSimpleSelectorType::AttributeSelector,
@@ -257,7 +261,7 @@ impl Selector {
       _ => panic!("Unknown selector section type: {selector_type}"),
     };
     let selector_section = OneSimpleSelector {
-      section_type: selector_section_type,
+      selector_type: selector_selector_type,
       value,
     };
     self.simple_selectors.push(selector_section);
