@@ -13,7 +13,7 @@ impl Generator for InlineStyleGenerator {
     // do nothing
   }
   fn push_transformed_style(&mut self, declaration: ParsedDeclaration) {
-    declaration.push_string_buf(&mut self.string_buffer);
+    declaration.generate_to_string_buf(&mut self.string_buffer);
   }
 }
 pub(crate) fn transform_inline_style_string(source: &str) -> String {

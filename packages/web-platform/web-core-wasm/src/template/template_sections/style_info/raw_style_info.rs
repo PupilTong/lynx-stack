@@ -8,7 +8,7 @@ use wasm_bindgen::prelude::*;
  * value: StyleSheet
  */
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(crate) struct StyleInfo {
   pub(super) css_id_to_style_sheet: HashMap<i32, StyleSheet>,
@@ -16,14 +16,14 @@ pub(crate) struct StyleInfo {
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize, Default))]
+#[cfg_attr(feature = "encode", derive(Serialize, Default, Clone))]
 pub(crate) struct StyleSheet {
   pub(super) imports: Vec<i32>,
   pub(super) rules: Vec<Rule>,
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(super) struct Rule {
   pub(super) rule_type: RuleType,
@@ -33,7 +33,7 @@ pub(super) struct Rule {
 }
 
 #[derive(Deserialize, PartialEq)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 pub(super) enum RuleType {
   Declaration = 1_isize,
   FontFace = 2_isize,
@@ -41,7 +41,7 @@ pub(super) enum RuleType {
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 /**
  * Either SelectorList or KeyFramesPrelude
@@ -54,21 +54,21 @@ pub(super) struct RulePrelude {
   pub(super) selector_list: Vec<Selector>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(super) struct Selector {
   pub(super) simple_selectors: Vec<OneSimpleSelector>,
 }
 
-#[derive(Deserialize, PartialEq)]
+#[derive(Deserialize, PartialEq, Clone)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 pub(super) struct OneSimpleSelector {
   pub(super) selector_type: OneSimpleSelectorType,
   pub(super) value: String,
 }
 
-#[derive(Deserialize, PartialEq)]
+#[derive(Deserialize, PartialEq, Clone)]
 #[cfg_attr(feature = "encode", derive(Serialize))]
 /**
  * All possible OneSimpleSelector types
@@ -86,19 +86,19 @@ pub(super) enum OneSimpleSelectorType {
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 struct Prelude {
   prelude_type: i32,
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 pub(super) struct DeclarationBlock {
   pub(super) declarations: Vec<Declaration>,
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
 pub(super) struct Declaration {
   pub(super) property_name: String,
@@ -106,7 +106,7 @@ pub(super) struct Declaration {
 }
 
 #[derive(Deserialize)]
-#[cfg_attr(feature = "encode", derive(Serialize))]
+#[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 pub(super) struct ValueToken {
   pub(super) token_type: u8,
   pub(super) value: String,
@@ -153,7 +153,14 @@ impl StyleInfo {
    * @returns A Uint8Array containing the serialized StyleInfo.
    */
   #[cfg_attr(feature = "encode", wasm_bindgen)]
-  pub fn encode(&self) -> js_sys::Uint8Array {
+  pub fn encode(&mut self) -> js_sys::Uint8Array {
+    use crate::template::template_sections::style_info::{
+      decoded_style_info, decoded_style_info::DecodedStyleInfo,
+      flattened_style_info::FlattenedStyleInfo,
+    };
+    let flattened_style_info: FlattenedStyleInfo = self.clone().into();
+    let decoded_style_info = DecodedStyleInfo::new(flattened_style_info, None, true, true);
+    self.style_content_str_size_hint = decoded_style_info.style_content.len();
     let serialized = bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
     js_sys::Uint8Array::from(serialized.as_slice())
   }
@@ -268,6 +275,49 @@ impl Selector {
   }
 }
 
+impl Selector {
+  pub(crate) fn generate_to_string_buf(&self, buf: &mut String) {
+    for selector in self.simple_selectors.iter() {
+      match selector.selector_type {
+        OneSimpleSelectorType::TypeSelector => {
+          buf.push_str(&selector.value);
+        }
+        OneSimpleSelectorType::ClassSelector => {
+          buf.push('.');
+          buf.push_str(&selector.value);
+        }
+        OneSimpleSelectorType::IdSelector => {
+          buf.push('#');
+          buf.push_str(&selector.value);
+        }
+        OneSimpleSelectorType::AttributeSelector => {
+          buf.push('[');
+          buf.push_str(&selector.value);
+          buf.push(']');
+        }
+        OneSimpleSelectorType::PseudoClassSelector => {
+          buf.push(':');
+          buf.push_str(&selector.value);
+        }
+        OneSimpleSelectorType::PseudoElementSelector => {
+          buf.push_str("::");
+          buf.push_str(&selector.value);
+        }
+        OneSimpleSelectorType::UniversalSelector => {
+          buf.push('*');
+        }
+        OneSimpleSelectorType::Combinator => {
+          buf.push(' ');
+          buf.push_str(&selector.value);
+          buf.push(' ');
+        }
+        OneSimpleSelectorType::UnknownText => {
+          buf.push_str(&selector.value);
+        }
+      }
+    }
+  }
+}
 #[cfg(feature = "encode")]
 struct DeclarationParser {
   value: String,

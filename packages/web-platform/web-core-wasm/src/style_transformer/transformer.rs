@@ -16,7 +16,7 @@ pub(crate) struct ParsedDeclaration {
 }
 
 impl ParsedDeclaration {
-  pub(crate) fn push_string_buf(&self, string_buffer: &mut String) {
+  pub(crate) fn generate_to_string_buf(&self, string_buffer: &mut String) {
     string_buffer.push_str(&self.property_name);
     string_buffer.push(':');
     string_buffer.push_str(&self.property_value);
