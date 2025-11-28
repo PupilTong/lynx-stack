@@ -1,4 +1,5 @@
 import {
+  get_decoded_font_family_string,
   RawStyleInfo,
   Rule,
   Selector,
@@ -188,6 +189,49 @@ describe('encodeCSS', () => {
     };
     const buffer = encodeCSS(cssMap);
     const decodedString = get_decoded_style_string(buffer, null, true, true);
+    expect(decodedString.trim()).toMatchSnapshot();
+  });
+  test(':root', () => {
+    const cssMap = {
+      '1': CSS.parse(`
+        :root {
+          background: red;
+        }
+      `).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    const decodedString = get_decoded_style_string(buffer, null, true, true);
+    expect(decodedString.trim()).toMatchSnapshot();
+  });
+  test('complex-root', () => {
+    const cssMap = {
+      '1': CSS.parse(`
+        .dark:root {
+          background: red;
+        }
+      `).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    const decodedString = get_decoded_style_string(buffer, null, true, true);
+    expect(decodedString.trim()).toMatchSnapshot();
+  });
+
+  test('font-family-at-rule', () => {
+    const cssMap = {
+      '1': CSS.parse(`
+        @font-face {
+          font-family: "MyFont";
+          src: url("myfont.woff");
+        }
+      `).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    const decodedString = get_decoded_font_family_string(
+      buffer,
+      null,
+      true,
+      true,
+    );
     expect(decodedString.trim()).toMatchSnapshot();
   });
 });

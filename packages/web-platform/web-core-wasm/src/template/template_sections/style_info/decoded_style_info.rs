@@ -28,7 +28,7 @@ pub(crate) struct DecodedStyleInfo {
   // if we are processing font_face, the declaration should be pushed to font_face_content for generating
   is_processing_font_face: bool,
   temp_child_rules_buffer: String,
-  css_og_cssid_to_class_selector_name_to_declarations_map:
+  css_og_css_id_to_class_selector_name_to_declarations_map:
     Option<CssOgCssIdToClassSelectorNameToDeclarationsMap>,
   config_enable_css_selector: bool,
   config_remove_css_scope: bool,
@@ -57,7 +57,7 @@ impl DecodedStyleInfo {
       style_content: String::with_capacity(flattened_style_info.style_content_str_size_hint),
       font_face_content: String::with_capacity(256),
       temp_child_rules_buffer: String::new(),
-      css_og_cssid_to_class_selector_name_to_declarations_map: if config_enable_css_selector {
+      css_og_css_id_to_class_selector_name_to_declarations_map: if config_enable_css_selector {
         Some(HashMap::new())
       } else {
         None
@@ -94,7 +94,7 @@ impl DecodedStyleInfo {
                2. for ::placeholder selector section, we should transform it to ::part(placeholder)::placeholder
                3. for type selector section, we should transform it to [lynx-tag="type"]
                4 if enableCSSSelector is false:
-                 4.1 if the current selector has only one class selector, we extract the class selector name and use it to map to the declarations in css_og_cssid_to_class_selector_name_to_declarations_map
+                 4.1 if the current selector has only one class selector, we extract the class selector name and use it to map to the declarations in css_og_css_id_to_class_selector_name_to_declarations_map
                      the declarations should be tranformed by calling transform_one_declaration function.
                      the current selector should be skipped in following phases.
                5 if the self.entryName is Some, we should add a [{constants::LYNX_CSS_ENTRY_NAME_ATTRIBUTE}="{entry_name}"] to the last compound selector just before the first pseudo class or pseudo element
@@ -337,7 +337,7 @@ impl Generator for DecodedStyleInfo {
       declaration.generate_to_string_buf(&mut self.temp_child_rules_buffer);
     } else {
       let class_selector_map = self
-        .css_og_cssid_to_class_selector_name_to_declarations_map
+        .css_og_css_id_to_class_selector_name_to_declarations_map
         .as_mut()
         .unwrap()
         .entry(self.css_og_current_processing_css_id.unwrap())
