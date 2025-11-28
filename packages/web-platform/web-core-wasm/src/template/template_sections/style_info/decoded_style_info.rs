@@ -54,7 +54,7 @@ impl DecodedStyleInfo {
   ) -> Self {
     let flattened_style_info: FlattenedStyleInfo = raw_style_info.into();
     let mut decoded_style_info = DecodedStyleInfo {
-      style_content: String::with_capacity(flattened_style_info.style_content_str_size_hint),
+      style_content: String::with_capacity(flattened_style_info.style_content_str_size_hint + 64),
       font_face_content: String::with_capacity(256),
       temp_child_rules_buffer: String::new(),
       css_og_css_id_to_class_selector_name_to_declarations_map: if config_enable_css_selector {
@@ -271,16 +271,22 @@ impl DecodedStyleInfo {
             self.is_processing_font_face = false;
           }
           RuleType::KeyFrames => {
-            self.font_face_content.push_str("@keyframes");
-            self.font_face_content.push_str(" {");
+            self.style_content.push_str("@keyframes ");
+            assert!(
+              style_rule.prelude.selector_list.len() == 1,
+              "KeyFrames rule should have only one selector"
+            );
+            let keyframes_name = &style_rule.prelude.selector_list[0];
+            keyframes_name.generate_to_string_buf(&mut self.style_content);
+            self.style_content.push_str(" {");
             for nested_rule in style_rule.nested_rules.into_iter() {
               for (selector_index, selector) in nested_rule.prelude.selector_list.iter().enumerate()
               {
                 // add a comma separator if not the last selector
                 if selector_index > 0 {
-                  self.font_face_content.push_str(", ");
+                  self.style_content.push_str(",");
                 }
-                selector.generate_to_string_buf(&mut self.font_face_content);
+                selector.generate_to_string_buf(&mut self.style_content);
               }
               if nested_rule.rule_type == RuleType::Declaration {
                 self.generate_one_declaration_block(nested_rule.declaration_block);
@@ -288,9 +294,8 @@ impl DecodedStyleInfo {
                 panic!("Unsupported nested rule type in KeyFrames");
               }
             }
-          }
-          _ => {
-            panic!("Unsupported rule type in generate_style_sheet");
+
+            self.style_content.push('}');
           }
         }
       }
@@ -493,5 +498,55 @@ mod test {
     };
     let result = generate_string_buf(raw_style_info);
     assert_eq!(result.style_content, "");
+  }
+  #[test]
+  fn test_keyframes_at_rule() {
+    let raw_style_info = RawStyleInfo {
+      css_id_to_style_sheet: HashMap::from_iter(vec![(
+        0,
+        StyleSheet {
+          imports: vec![],
+          rules: vec![Rule {
+            rule_type: RuleType::KeyFrames,
+            prelude: RulePrelude {
+              selector_list: vec![Selector {
+                simple_selectors: vec![OneSimpleSelector {
+                  selector_type: OneSimpleSelectorType::UnknownText,
+                  value: "animation-name".to_string(),
+                }],
+              }],
+            },
+            nested_rules: vec![Rule {
+              rule_type: RuleType::Declaration,
+              prelude: RulePrelude {
+                selector_list: vec![Selector {
+                  simple_selectors: vec![OneSimpleSelector {
+                    selector_type: OneSimpleSelectorType::UnknownText,
+                    value: "0%".to_string(),
+                  }],
+                }],
+              },
+              nested_rules: vec![],
+              declaration_block: DeclarationBlock {
+                declarations: vec![Declaration {
+                  property_name: "width".to_string(),
+                  value_token_list: vec![ValueToken {
+                    token_type: crate::css_tokenizer::token_types::DIMENSION_TOKEN,
+                    value: "100rpx".to_string(),
+                  }],
+                }],
+              },
+            }],
+            declaration_block: DeclarationBlock {
+              declarations: vec![],
+            },
+          }],
+        },
+      )]),
+      style_content_str_size_hint: 0,
+    };
+    let result = generate_string_buf(raw_style_info);
+    let expected = "@keyframes animation-name {0% {width:calc(100 * var(--rpx-unit));}}";
+    assert_eq!(result.style_content, expected);
   }
 }
