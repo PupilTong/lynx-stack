@@ -4,6 +4,7 @@ import {
   Selector,
   RulePrelude,
   Declaration,
+  get_decoded_style_string,
 } from '../binary/encoder.js';
 import { describe, test, expect } from 'vitest';
 import { encodeCSS } from '../ts/encode/encodeCSS.js';
@@ -175,5 +176,18 @@ describe('encodeCSS', () => {
       '1': CSS.parse(css).root,
     };
     expect(() => encodeCSS(cssMap)).toThrowError(/Invalid importCssId/);
+  });
+
+  test('normal css', () => {
+    const cssMap = {
+      '1': CSS.parse(`
+        .foo {
+          background: red;
+        }
+      `).root,
+    };
+    const buffer = encodeCSS(cssMap);
+    const decodedString = get_decoded_style_string(buffer, null, true, true);
+    expect(decodedString.trim()).toMatchSnapshot();
   });
 });

@@ -12,6 +12,7 @@ use crate::style_transformer::{Generator, ParsedDeclaration, StyleTransformer};
 use crate::template::template_sections::style_info::raw_style_info::{
   DeclarationBlock, OneSimpleSelector, OneSimpleSelectorType,
 };
+use crate::template::template_sections::style_info::RawStyleInfo;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
@@ -46,11 +47,12 @@ pub(crate) struct DecodedStyleInfo {
 
 impl DecodedStyleInfo {
   pub(crate) fn new(
-    flattened_style_info: FlattenedStyleInfo,
+    raw_style_info: RawStyleInfo,
     entry_name: Option<String>,
     config_enable_css_selector: bool,
     config_remove_css_scope: bool,
   ) -> Self {
+    let flattened_style_info: FlattenedStyleInfo = raw_style_info.into();
     let mut decoded_style_info = DecodedStyleInfo {
       style_content: String::with_capacity(flattened_style_info.style_content_str_size_hint),
       font_face_content: String::with_capacity(256),
@@ -324,7 +326,7 @@ impl DecodedStyleInfo {
       } else {
         &mut self.style_content
       })
-      .push_str(" }");
+      .push('}');
     }
   }
 }
@@ -369,13 +371,12 @@ mod test {
   };
 
   use super::super::{
-    Declaration, DeclarationBlock, DecodedStyleInfo, FlattenedStyleInfo, OneSimpleSelector,
-    OneSimpleSelectorType, RawStyleInfo, RuleType,
+    Declaration, DeclarationBlock, DecodedStyleInfo, OneSimpleSelector, OneSimpleSelectorType,
+    RawStyleInfo, RuleType,
   };
 
   fn generate_string_buf(raw_style_info: RawStyleInfo) -> DecodedStyleInfo {
-    let flattened_style_info: FlattenedStyleInfo = raw_style_info.into();
-    DecodedStyleInfo::new(flattened_style_info, None, true, true)
+    DecodedStyleInfo::new(raw_style_info, None, true, true)
   }
 
   #[test]
@@ -428,7 +429,7 @@ mod test {
       style_content_str_size_hint: 0,
     };
     let result = generate_string_buf(raw_style_info);
-    let expected = "@font-face {font-family:MyFont;src:url('myfont.woff2')format('woff2'); }";
+    let expected = "@font-face {font-family:MyFont;src:url('myfont.woff2')format('woff2');}";
     assert_eq!(result.font_face_content, expected);
   }
 
@@ -465,7 +466,7 @@ mod test {
       style_content_str_size_hint: 0,
     };
     let result = generate_string_buf(raw_style_info);
-    let expected = ".test-class:not([l-e-name]) {width:calc(100 * var(--rpx-unit)); }";
+    let expected = ".test-class:not([l-e-name]) {width:calc(100 * var(--rpx-unit));}";
     assert_eq!(result.style_content, expected);
   }
 

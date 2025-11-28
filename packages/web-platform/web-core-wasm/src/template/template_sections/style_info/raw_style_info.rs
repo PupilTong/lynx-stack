@@ -154,12 +154,8 @@ impl RawStyleInfo {
    */
   #[cfg_attr(feature = "encode", wasm_bindgen)]
   pub fn encode(&mut self) -> js_sys::Uint8Array {
-    use crate::template::template_sections::style_info::{
-      decoded_style_info, decoded_style_info::DecodedStyleInfo,
-      flattened_style_info::FlattenedStyleInfo,
-    };
-    let flattened_style_info: FlattenedStyleInfo = self.clone().into();
-    let decoded_style_info = DecodedStyleInfo::new(flattened_style_info, None, true, true);
+    use crate::template::template_sections::style_info::decoded_style_info::DecodedStyleInfo;
+    let decoded_style_info = DecodedStyleInfo::new(self.clone(), None, true, true);
     self.style_content_str_size_hint = decoded_style_info.style_content.len();
     let serialized = bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
     js_sys::Uint8Array::from(serialized.as_slice())
