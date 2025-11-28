@@ -10,9 +10,9 @@ export default defineConfig({
   test: {
     include: ['**/tests/css-encode.spec.ts'],
     name: 'web-platform/web-core-tests',
-    // benchmark: {
-    //   include: ['**/tests/*.bench.vitest.spec.ts'],
-    // },
+    benchmark: {
+      include: ['**/tests/*.bench.spec.ts'],
+    },
   },
   plugins: [
     // process.env['CI'] ? codspeed() : undefined,
