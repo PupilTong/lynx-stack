@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize)]
 #[cfg_attr(feature = "encode", derive(Serialize, Clone))]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
-pub(crate) struct StyleInfo {
+pub(crate) struct RawStyleInfo {
   pub(super) css_id_to_style_sheet: HashMap<i32, StyleSheet>,
   pub(super) style_content_str_size_hint: usize,
 }
@@ -114,7 +114,7 @@ pub(super) struct ValueToken {
 
 #[cfg(feature = "encode")]
 #[cfg_attr(feature = "encode", wasm_bindgen)]
-impl StyleInfo {
+impl RawStyleInfo {
   #[cfg_attr(feature = "encode", wasm_bindgen(constructor))]
   pub fn new() -> Self {
     Self {
@@ -149,8 +149,8 @@ impl StyleInfo {
   }
 
   /**
-   * Encodes the StyleInfo into a Uint8Array using bincode serialization.
-   * @returns A Uint8Array containing the serialized StyleInfo.
+   * Encodes the RawStyleInfo into a Uint8Array using bincode serialization.
+   * @returns A Uint8Array containing the serialized RawStyleInfo.
    */
   #[cfg_attr(feature = "encode", wasm_bindgen)]
   pub fn encode(&mut self) -> js_sys::Uint8Array {

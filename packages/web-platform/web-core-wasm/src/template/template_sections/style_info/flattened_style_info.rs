@@ -3,7 +3,7 @@
  * Licensed under the Apache License Version 2.0 that can be found in the
  * LICENSE file in the root directory of this source tree.
  */
-use super::raw_style_info::{Rule, StyleInfo};
+use super::raw_style_info::{RawStyleInfo, Rule};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
@@ -18,13 +18,13 @@ pub(super) struct FlattenedStyleInfo {
   pub(super) style_content_str_size_hint: usize,
 }
 
-impl From<StyleInfo> for FlattenedStyleInfo {
-  fn from(mut style_info: StyleInfo) -> Self {
+impl From<RawStyleInfo> for FlattenedStyleInfo {
+  fn from(mut style_info: RawStyleInfo) -> Self {
     // Step 1. Topological sorting
     /*
      * kahn's algorithm
-     * 1. The styleInfo is already equivalent to a adjacency list. (cssId, import)
-     * 2. The styleInfo is a DAG therefore we don't need to do cyclic detection
+     * 1. The RawStyleInfo is already equivalent to a adjacency list. (cssId, import)
+     * 2. The RawStyleInfo is a DAG therefore we don't need to do cyclic detection
      */
     let mut in_degree_map: HashMap<i32, i32> = HashMap::new();
     let mut sorted_css_ids: Vec<i32> = Vec::new();
@@ -95,12 +95,12 @@ impl From<StyleInfo> for FlattenedStyleInfo {
 #[cfg(test)]
 mod tests {
   use super::super::raw_style_info::{Rule, StyleSheet};
-  use super::{FlattenedStyleInfo, StyleInfo};
+  use super::{FlattenedStyleInfo, RawStyleInfo};
   use std::collections::{HashMap, HashSet};
 
   #[test]
   fn test_flatten_style_info() {
-    let mut style_info: StyleInfo = StyleInfo::new();
+    let mut style_info: RawStyleInfo = RawStyleInfo::new();
     style_info.css_id_to_style_sheet.insert(
       1,
       StyleSheet {
@@ -181,14 +181,14 @@ mod tests {
 
   #[test]
   fn test_flatten_style_info_empty() {
-    let style_info: StyleInfo = StyleInfo::new();
+    let style_info: RawStyleInfo = RawStyleInfo::new();
     let flattened_info: FlattenedStyleInfo = style_info.into();
     assert!(flattened_info.css_id_to_style_sheet.is_empty());
   }
 
   #[test]
   fn test_flatten_style_info_diamond() {
-    let mut style_info: StyleInfo = StyleInfo::new();
+    let mut style_info: RawStyleInfo = RawStyleInfo::new();
     // 1 -> 2, 1 -> 3
     style_info.css_id_to_style_sheet.insert(
       1,
@@ -238,7 +238,7 @@ mod tests {
 
   #[test]
   fn test_flatten_style_info_disjoint() {
-    let mut style_info: StyleInfo = StyleInfo::new();
+    let mut style_info: RawStyleInfo = RawStyleInfo::new();
     // 1 -> 2
     style_info.css_id_to_style_sheet.insert(
       1,
@@ -297,7 +297,7 @@ mod tests {
 
   #[test]
   fn test_flatten_style_info_cycle() {
-    let mut style_info: StyleInfo = StyleInfo::new();
+    let mut style_info: RawStyleInfo = RawStyleInfo::new();
     // 1 -> 2
     style_info.css_id_to_style_sheet.insert(
       1,

@@ -24,6 +24,8 @@ pub(crate) struct DecodedStyleInfo {
   pub(crate) style_content: String,
   // the font face should be placed at the head of the css content, therefore we use a separate buffer
   pub(crate) font_face_content: String,
+  // if we are processing font_face, the declaration should be pushed to font_face_content for generating
+  is_processing_font_face: bool,
   temp_child_rules_buffer: String,
   css_og_cssid_to_class_selector_name_to_declarations_map:
     Option<CssOgCssIdToClassSelectorNameToDeclarationsMap>,
@@ -62,6 +64,7 @@ impl DecodedStyleInfo {
       config_enable_css_selector,
       config_remove_css_scope,
       generate_declaration_block: true,
+      is_processing_font_face: false,
       css_og_current_processing_css_id: None,
       css_og_current_processing_class_selector_names: None,
     };
@@ -192,7 +195,7 @@ impl DecodedStyleInfo {
                   the_index_of_last_compound_selector,
                   OneSimpleSelector {
                     selector_type: OneSimpleSelectorType::PseudoClassSelector,
-                    value: format!("not({})", crate::constants::LYNX_ENTRY_NAME_ATTRIBUTE),
+                    value: format!("not([{}])", crate::constants::LYNX_ENTRY_NAME_ATTRIBUTE),
                   },
                 );
               }
@@ -254,19 +257,20 @@ impl DecodedStyleInfo {
                   self.style_content.push_str(", ");
                 }
               }
-              self.style_content.push_str(" {\n");
+              self.style_content.push_str(" {");
               self.style_content.push_str(&self.temp_child_rules_buffer);
-              self.style_content.push_str("}\n");
+              self.style_content.push_str("}");
             }
           }
           RuleType::FontFace => {
             self.font_face_content.push_str("@font-face");
+            self.is_processing_font_face = true;
             self.generate_one_declaration_block(style_rule.declaration_block);
-            self.font_face_content.push_str("");
+            self.is_processing_font_face = false;
           }
           RuleType::KeyFrames => {
             self.font_face_content.push_str("@keyframes");
-            self.font_face_content.push_str(" {\n");
+            self.font_face_content.push_str(" {");
             for nested_rule in style_rule.nested_rules.into_iter() {
               for (selector_index, selector) in nested_rule.prelude.selector_list.iter().enumerate()
               {
@@ -293,7 +297,12 @@ impl DecodedStyleInfo {
   fn generate_one_declaration_block(&mut self, declaration_block: DeclarationBlock) {
     let generate_block_wrapper = self.generate_declaration_block;
     if generate_block_wrapper {
-      self.style_content.push_str(" {\n");
+      (if self.is_processing_font_face {
+        &mut self.font_face_content
+      } else {
+        &mut self.style_content
+      })
+      .push_str(" {");
     }
     let mut transformer = StyleTransformer::new(self);
 
@@ -310,7 +319,12 @@ impl DecodedStyleInfo {
       transformer.on_token(SEMICOLON_TOKEN, ";");
     }
     if generate_block_wrapper {
-      self.style_content.push_str("}\n");
+      (if self.is_processing_font_face {
+        &mut self.font_face_content
+      } else {
+        &mut self.style_content
+      })
+      .push_str(" }");
     }
   }
 }
@@ -338,6 +352,145 @@ impl Generator for DecodedStyleInfo {
     }
   }
   fn push_transformed_style(&mut self, declaration: ParsedDeclaration) {
-    declaration.generate_to_string_buf(&mut self.style_content);
+    declaration.generate_to_string_buf(if self.is_processing_font_face {
+      &mut self.font_face_content
+    } else {
+      &mut self.style_content
+    });
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use std::collections::HashMap;
+
+  use crate::template::template_sections::style_info::{
+    raw_style_info::StyleSheet, Rule, RulePrelude, Selector, ValueToken,
+  };
+
+  use super::super::{
+    Declaration, DeclarationBlock, DecodedStyleInfo, FlattenedStyleInfo, OneSimpleSelector,
+    OneSimpleSelectorType, RawStyleInfo, RuleType,
+  };
+
+  fn generate_string_buf(raw_style_info: RawStyleInfo) -> DecodedStyleInfo {
+    let flattened_style_info: FlattenedStyleInfo = raw_style_info.into();
+    DecodedStyleInfo::new(flattened_style_info, None, true, true)
+  }
+
+  #[test]
+  fn test_generate_string_buf() {
+    let raw_style_info = RawStyleInfo::new();
+    let result = generate_string_buf(raw_style_info);
+    assert_eq!(result.style_content, "");
+  }
+
+  #[test]
+  fn test_one_font_face() {
+    let raw_style_info = RawStyleInfo {
+      css_id_to_style_sheet: HashMap::from_iter(vec![(
+        0,
+        StyleSheet {
+          imports: vec![],
+          rules: vec![Rule {
+            nested_rules: vec![],
+            rule_type: RuleType::FontFace,
+            prelude: RulePrelude {
+              selector_list: vec![],
+            },
+            declaration_block: DeclarationBlock {
+              declarations: vec![
+                Declaration {
+                  property_name: "font-family".to_string(),
+                  value_token_list: vec![ValueToken {
+                    token_type: crate::css_tokenizer::token_types::IDENT_TOKEN,
+                    value: "MyFont".to_string(),
+                  }],
+                },
+                Declaration {
+                  property_name: "src".to_string(),
+                  value_token_list: vec![
+                    ValueToken {
+                      token_type: crate::css_tokenizer::token_types::IDENT_TOKEN,
+                      value: "url('myfont.woff2')".to_string(),
+                    },
+                    ValueToken {
+                      token_type: crate::css_tokenizer::token_types::IDENT_TOKEN,
+                      value: "format('woff2')".to_string(),
+                    },
+                  ],
+                },
+              ],
+            },
+          }],
+        },
+      )]),
+      style_content_str_size_hint: 0,
+    };
+    let result = generate_string_buf(raw_style_info);
+    let expected = "@font-face {font-family:MyFont;src:url('myfont.woff2')format('woff2'); }";
+    assert_eq!(result.font_face_content, expected);
+  }
+
+  #[test]
+  fn test_rpx_declaration() {
+    let raw_style_info = RawStyleInfo {
+      css_id_to_style_sheet: HashMap::from_iter(vec![(
+        0,
+        StyleSheet {
+          imports: vec![],
+          rules: vec![Rule {
+            nested_rules: vec![],
+            rule_type: RuleType::Declaration,
+            prelude: RulePrelude {
+              selector_list: vec![Selector {
+                simple_selectors: vec![OneSimpleSelector {
+                  selector_type: OneSimpleSelectorType::ClassSelector,
+                  value: "test-class".to_string(),
+                }],
+              }],
+            },
+            declaration_block: DeclarationBlock {
+              declarations: vec![Declaration {
+                property_name: "width".to_string(),
+                value_token_list: vec![ValueToken {
+                  token_type: crate::css_tokenizer::token_types::DIMENSION_TOKEN,
+                  value: "100rpx".to_string(),
+                }],
+              }],
+            },
+          }],
+        },
+      )]),
+      style_content_str_size_hint: 0,
+    };
+    let result = generate_string_buf(raw_style_info);
+    let expected = ".test-class:not([l-e-name]) {width:calc(100 * var(--rpx-unit)); }";
+    assert_eq!(result.style_content, expected);
+  }
+
+  #[test]
+  fn push_import_only() {
+    let raw_style_info = RawStyleInfo {
+      css_id_to_style_sheet: HashMap::from_iter(vec![
+        (
+          1,
+          StyleSheet {
+            imports: vec![2],
+            rules: vec![],
+          },
+        ),
+        (
+          2,
+          StyleSheet {
+            imports: vec![],
+            rules: vec![],
+          },
+        ),
+      ]),
+      style_content_str_size_hint: 0,
+    };
+    let result = generate_string_buf(raw_style_info);
+    assert_eq!(result.style_content, "");
   }
 }

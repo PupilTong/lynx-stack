@@ -1,6 +1,6 @@
 import * as CSS from '@lynx-js/css-serializer';
 import {
-  StyleInfo,
+  RawStyleInfo,
   Rule,
   Selector,
   RulePrelude,
@@ -10,7 +10,7 @@ import {
 export function encodeCSS(
   cssMap: Record<string, CSS.LynxStyleNode[]>,
 ): Uint8Array {
-  const rawStyleInfo = new StyleInfo();
+  const rawStyleInfo = new RawStyleInfo();
 
   for (const [cssId, nodes] of Object.entries(cssMap)) {
     const parsedCssId = Number(cssId);
@@ -103,9 +103,9 @@ export function encodeCSS(
                 `Selector section of type ${child.type} is missing a name/value.`,
               );
             }
-            // @ts-expect-error
             selector.push_one_selector_section(
               child.type,
+              // @ts-expect-error
               child.name as string,
             );
           }

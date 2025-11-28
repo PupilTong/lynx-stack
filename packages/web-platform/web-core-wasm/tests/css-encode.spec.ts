@@ -1,5 +1,5 @@
 import {
-  StyleInfo,
+  RawStyleInfo,
   Rule,
   Selector,
   RulePrelude,
@@ -11,7 +11,7 @@ import * as CSS from '@lynx-js/css-serializer';
 
 describe('RawStyleInfo', () => {
   test('should encode StyleRule correctly', () => {
-    const rawStyleInfo = new StyleInfo();
+    const rawStyleInfo = new RawStyleInfo();
 
     const rule = new Rule('StyleRule');
 
@@ -34,7 +34,7 @@ describe('RawStyleInfo', () => {
   });
 
   test('should encode FontFaceRule correctly', () => {
-    const rawStyleInfo = new StyleInfo();
+    const rawStyleInfo = new RawStyleInfo();
     const rule = new Rule('FontFaceRule');
 
     const declaration = new Declaration('font-family', 'MyFont');
@@ -48,8 +48,9 @@ describe('RawStyleInfo', () => {
   });
 
   test('should handle imports correctly', () => {
-    const rawStyleInfo = new StyleInfo();
+    const rawStyleInfo = new RawStyleInfo();
     rawStyleInfo.append_import(1, 2);
+    rawStyleInfo.push_rule(2, new Rule('StyleRule'));
     const buffer = rawStyleInfo.encode();
     expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(0);
@@ -92,6 +93,7 @@ describe('encodeCSS', () => {
     `;
     const cssMap = {
       '1': CSS.parse(css).root,
+      '2': CSS.parse('.bar { color: blue; }').root,
     };
     const buffer = encodeCSS(cssMap);
     expect(buffer).toBeInstanceOf(Uint8Array);
