@@ -8,6 +8,7 @@ mod rules;
 mod token_transformer;
 mod transformer;
 pub(crate) use inline_style::transform_inline_style_string;
+pub(crate) use rules::query_transform_rules;
 pub(crate) use transformer::Generator;
 pub(crate) use transformer::ParsedDeclaration;
 pub(crate) use transformer::StyleTransformer;

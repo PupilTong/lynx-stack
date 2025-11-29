@@ -1,11 +1,9 @@
-use super::style_sheet_processor::{
-  transform_to_web_style_css_ng, transform_to_web_style_css_og,
-  CssOgCssIdToClassNameToDeclarationsMap,
-};
-use crate::template::FlattenedStyleInfo;
+use crate::template::template_sections::style_info::DecodedStyleInfo;
 use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 
+pub(super) type CssOgCssIdToClassNameToDeclarationsMap =
+  HashMap<i32, HashMap<String, HashMap<String, String>>>;
 /**
  * There are two modes to manage styles:
  * 1. CSS Selector mode: styles are injected into a <style>, the style manager won't keep track of which styles are applied to which elements.
@@ -89,11 +87,7 @@ impl StyleManager {
     }
   }
 
-  pub(crate) fn push_style_sheet(
-    &mut self,
-    flattened_style_info: &FlattenedStyleInfo,
-    entry_name: Option<&str>,
-  ) {
+  pub(crate) fn push_style_sheet(&mut self, flattened_style_info: &DecodedStyleInfo) {
     let new_style_element = web_sys::window()
       .unwrap()
       .document()
@@ -101,26 +95,7 @@ impl StyleManager {
       .create_element("style")
       .unwrap()
       .unchecked_into::<web_sys::HtmlStyleElement>();
-    if self.config_enable_css_selector {
-      let style_content = transform_to_web_style_css_ng(
-        flattened_style_info,
-        self.config_enable_remove_css_scope,
-        entry_name,
-      );
-      new_style_element.set_inner_text(&style_content);
-    } else {
-      let (style_content, map): (String, CssOgCssIdToClassNameToDeclarationsMap) =
-        transform_to_web_style_css_og(
-          flattened_style_info,
-          self.config_enable_remove_css_scope,
-          entry_name,
-        );
-      new_style_element.set_inner_text(&style_content);
-      self
-        .css_query_map_by_entry_name
-        .get_or_insert_with(Default::default)
-        .insert(entry_name.unwrap_or("").to_string(), map);
-    }
+    new_style_element.set_inner_text(&flattened_style_info.style_content);
     self.root_node.append_child(&new_style_element).unwrap();
   }
 }

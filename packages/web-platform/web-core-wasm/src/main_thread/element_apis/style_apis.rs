@@ -1,8 +1,11 @@
-use super::super::style::{
-  transform_declarations, transform_inline_style_string, STYLE_PROPERTY_MAP,
-};
+/*
+ * Copyright 2025 The Lynx Authors. All rights reserved.
+ * Licensed under the Apache License Version 2.0 that can be found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 use super::{set_css_id_status, MainThreadWasmContext};
 use crate::constants;
+use crate::style_transformer::{query_transform_rules, transform_inline_style_string};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -61,8 +64,7 @@ impl MainThreadWasmContext {
     let binding = self.get_element_data_by_unique_id(unique_id).unwrap();
     let dom = &binding.borrow().dom_ref;
     if let Some(value) = value {
-      let declarations = vec![(key, value)];
-      let (transformed, _) = transform_declarations(&declarations);
+      let (transformed, _) = query_transform_rules(&key, &value);
       let style = dom.style();
       for (k, v) in transformed.iter() {
         style.set_property(k, v).unwrap();
@@ -74,7 +76,7 @@ impl MainThreadWasmContext {
 
   #[wasm_bindgen(js_name = "__wasm_AddInlineStyle_number_key")]
   pub fn set_inline_styles_number_key(&self, unique_id: usize, key: i32, value: Option<String>) {
-    if let Some(style_property) = STYLE_PROPERTY_MAP.get(key as usize) {
+    if let Some(style_property) = constants::STYLE_PROPERTY_MAP.get(key as usize) {
       self.add_inline_style_raw_string_key(unique_id, style_property.to_string(), value.clone());
     }
   }
@@ -83,7 +85,7 @@ impl MainThreadWasmContext {
   pub fn set_inline_styles_in_str(&self, unique_id: usize, styles: String) {
     let binding = self.get_element_data_by_unique_id(unique_id).unwrap();
     let dom = &binding.borrow().dom_ref;
-    let (transformed_style_str, _) = transform_inline_style_string(&styles);
+    let transformed_style_str = transform_inline_style_string(&styles);
     let _ = dom.set_attribute("style", &transformed_style_str);
   }
 }

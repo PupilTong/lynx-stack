@@ -11,4 +11,4 @@
 // pub(crate) use decoded::FlattenedStyleSheet;
 // #[cfg(test)]
 // pub(crate) use raw_template::StyleRule;
-mod template_sections;
+pub(crate) mod template_sections;

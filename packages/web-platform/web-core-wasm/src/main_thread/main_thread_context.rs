@@ -1,7 +1,7 @@
-use super::{
-  // element_apis::ElementTemplatesInstance,
-  style::StyleManager,
-};
+// use super::{
+//   // element_apis::ElementTemplatesInstance,
+//   // style::StyleManager,
+// };
 
 use crate::js_binding::MainThreadJSBinding;
 use crate::main_thread::element_apis::LynxElementData;
@@ -38,7 +38,7 @@ pub struct MainThreadWasmContext {
   pub(super) unique_id_to_element_map: Vec<Option<Rc<RefCell<Box<LynxElementData>>>>>,
   pub(super) timing_flags: Vec<String>,
   pub(super) exposure_changed_elements: Vec<i32>,
-  pub(super) style_manager: StyleManager,
+  // pub(super) style_manager: StyleManager,
   pub(super) enabled_events: HashSet<String>,
   pub(super) page_element_unique_id: Option<usize>,
   // pub(super) template: DecodedTemplateImpl,
@@ -73,11 +73,11 @@ impl MainThreadWasmContext {
     config_default_display_linear: bool,
     config_default_overflow_visible: bool,
   ) -> MainThreadWasmContext {
-    let style_manager = StyleManager::new(
-      root_node.clone(),
-      config_enable_css_selector,
-      config_enable_remove_css_scope,
-    );
+    // let style_manager = StyleManager::new(
+    //   root_node.clone(),
+    //   config_enable_css_selector,
+    //   config_enable_remove_css_scope,
+    // );
     MainThreadWasmContext {
       // template,
       mts_binding,
@@ -88,7 +88,7 @@ impl MainThreadWasmContext {
       timing_flags: vec![],
       exposure_changed_elements: vec![],
       // document,
-      style_manager,
+      // style_manager,
       entry_template_url: None,
       // root_node,
       page_element_unique_id: None,

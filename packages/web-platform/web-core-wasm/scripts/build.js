@@ -68,11 +68,11 @@ function build(release, rustFlags, outName, optimizeArgs, rust_features) {
  * mutable-globals | 74 | 61 | 13.1
  */
 
-// build(
-//   true,
-//   '-C target_feature=+bulk-memory,+sign-ext,+simd128,+reference-types,+nontrapping-fptoint,+mutable-globals',
-//   'standard',
-//   '--enable-bulk-memory-opt --enable-sign-ext --enable-simd --enable-reference-types --enable-nontrapping-float-to-int --enable-mutable-globals',
-// );
+build(
+  true,
+  '-C target_feature=+bulk-memory,+sign-ext,+simd128,+reference-types,+nontrapping-fptoint,+mutable-globals',
+  'standard',
+  '--enable-bulk-memory-opt --enable-sign-ext --enable-simd --enable-reference-types --enable-nontrapping-float-to-int --enable-mutable-globals',
+);
 build(true, '', 'encoder', '--all-features', '"encode"');
 // build(false, '', 'debug', '');

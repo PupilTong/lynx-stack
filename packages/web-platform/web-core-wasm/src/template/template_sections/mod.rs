@@ -1,2 +1,3 @@
-mod element_template;
-mod style_info;
+pub(crate) mod configurations;
+pub(crate) mod element_template;
+pub(crate) mod style_info;

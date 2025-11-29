@@ -9,8 +9,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use wasm_bindgen::prelude::*;
 
-#[cfg_attr(feature = "encode", wasm_bindgen, derive(Serialize, Default))]
-#[derive(Deserialize)]
+#[cfg_attr(feature = "encode", wasm_bindgen)]
+#[cfg_attr(feature = "encode", derive(Serialize))]
+#[derive(Deserialize, Default)]
 pub struct RawElementTemplate {
   operations: Vec<Operation>,
   #[serde(default, skip_serializing)]
@@ -29,7 +30,7 @@ impl RawElementTemplate {
     self.tag_name.insert(tag_name.clone());
     self.operations.push(Operation {
       opcode: LEOAsmOpcode::CreateElement, // CREATE_ELEMENT
-      operands_num: vec![element_id as i32],
+      operands_num: vec![element_id],
       operands_str: vec![tag_name],
     });
   }
@@ -38,7 +39,7 @@ impl RawElementTemplate {
   pub fn set_attribute(&mut self, element_id: i32, attr_name: String, attr_value: String) {
     self.operations.push(Operation {
       opcode: LEOAsmOpcode::SetAttribute, // SET_ATTRIBUTE
-      operands_num: vec![element_id as i32],
+      operands_num: vec![element_id],
       operands_str: vec![attr_name, attr_value],
     });
   }
