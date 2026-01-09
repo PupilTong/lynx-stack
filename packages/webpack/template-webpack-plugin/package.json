@@ -38,7 +38,6 @@
   "dependencies": {
     "@lynx-js/css-serializer": "workspace:*",
     "@lynx-js/tasm": "0.0.20",
-    "@lynx-js/web-core-wasm": "workspace:*",
     "@lynx-js/webpack-runtime-globals": "workspace:^",
     "@rspack/lite-tapable": "1.0.1",
     "css-tree": "^3.1.0",
@@ -52,6 +51,9 @@
     "@types/object.groupby": "^1.0.4",
     "css-loader": "^7.1.2",
     "webpack": "^5.104.1"
+  },
+  "optionalDependencies": {
+    "@lynx-js/web-core-wasm": "workspace:*"
   },
   "engines": {
     "node": ">=18"
