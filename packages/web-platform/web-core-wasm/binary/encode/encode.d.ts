@@ -1,5 +1,9 @@
 /* tslint:disable */
 /* eslint-disable */
+export function decode_style_info(buffer: Uint8Array, entry_name: string | null | undefined, config_enable_css_selector: boolean): Uint8Array;
+export function encode_legacy_json_generated_raw_style_info(raw_style_info: RawStyleInfo, config_enable_css_selector: boolean, entry_name?: string | null): Uint8Array;
+export function get_style_content(buffer: Uint8Array): string;
+export function get_font_face_content(buffer: Uint8Array): string;
 export enum LEOAsmOpcode {
   SetAttribute = 1,
   RemoveChild = 3,
@@ -11,21 +15,10 @@ export enum LEOAsmOpcode {
   AddEvent = 11,
   AppendToRoot = 12,
 }
-export class DecodedStyleData {
-  free(): void;
-  [Symbol.dispose](): void;
-  constructor(buffer: Uint8Array);
-  query_css_og_declarations_by_css_id(css_id: number, class_name: string[]): string;
-  static decode_into(buffer: Uint8Array, entry_name: string | null | undefined, config_enable_css_selector: boolean): Uint8Array;
-  static encode_from_raw_style_info(raw_style_info: RawStyleInfo, config_enable_css_selector: boolean, entry_name?: string | null): Uint8Array;
-  readonly style_content: string;
-  readonly font_face_content: string;
-}
 export class ElementTemplateSection {
   free(): void;
   [Symbol.dispose](): void;
   constructor();
-  static from_encoded(buffer: Uint8Array): ElementTemplateSection;
   add_element_template(id: string, raw_element_template: RawElementTemplate): void;
   encode(): Uint8Array;
 }
