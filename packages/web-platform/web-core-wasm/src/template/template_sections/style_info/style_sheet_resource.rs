@@ -5,15 +5,21 @@
  */
 
 use super::decoded_style_data::DecodedStyleData;
+use std::rc::Rc;
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
+#[derive(Clone)]
 pub struct StyleSheetResource {
   pub(crate) style_content_element: Option<web_sys::Element>,
   pub(crate) font_face_element: Option<web_sys::Element>,
   pub(crate) css_og_css_id_to_class_selector_name_to_declarations_map:
-    Option<super::CssOgCssIdToClassSelectorNameToDeclarationsMap>,
+    Option<Rc<super::CssOgCssIdToClassSelectorNameToDeclarationsMap>>,
 }
 
+#[wasm_bindgen]
 impl StyleSheetResource {
+  #[wasm_bindgen(constructor)]
   pub fn new(
     buffer: js_sys::Uint8Array,
     document: &web_sys::Document,
@@ -41,10 +47,13 @@ impl StyleSheetResource {
       style_content_element,
       font_face_element,
       css_og_css_id_to_class_selector_name_to_declarations_map: decoded_style_data
-        .css_og_css_id_to_class_selector_name_to_declarations_map,
+        .css_og_css_id_to_class_selector_name_to_declarations_map
+        .map(Rc::new),
     })
   }
+}
 
+impl StyleSheetResource {
   pub(crate) fn query_css_og_declarations_by_css_id(
     &self,
     css_id: i32,

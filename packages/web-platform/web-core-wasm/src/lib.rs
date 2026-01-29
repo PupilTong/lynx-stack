@@ -33,6 +33,4 @@ pub use template::template_sections::style_info::{
 };
 
 #[cfg(feature = "client")]
-pub use template::{
-  template_sections::style_info::style_sheet_resource::StyleSheetResource, TemplateManager,
-};
+pub use template::template_sections::style_info::style_sheet_resource::StyleSheetResource;

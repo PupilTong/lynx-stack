@@ -6,21 +6,31 @@
 
 use fnv::FnvHashMap;
 
-#[derive(Default, Clone)]
+#[cfg(feature = "server")]
+use rkyv::Serialize;
+use rkyv::{Archive, Deserialize};
+
+#[derive(Default, Clone, Archive, Deserialize)]
+#[cfg_attr(feature = "server", derive(Serialize))]
 pub struct EventHandler {
   /* bind capture-bind catch capture-catch */
-  framework_cross_thread_identifier: FnvHashMap<String, String>,
+  pub(crate) framework_cross_thread_identifier: FnvHashMap<String, String>,
   /* bind capture-bind catch capture-catch */
-  framework_run_worklet_identifier: FnvHashMap<String, wasm_bindgen::JsValue>,
+  #[with(rkyv::with::Skip)]
+  pub(crate) framework_run_worklet_identifier: FnvHashMap<String, wasm_bindgen::JsValue>,
   /* bind capture-bind catch capture-catch */
   // event_type_to_handlers: FnvHashMap<String, Vec<js_sys::Function>>,
 }
 
+#[derive(Archive, Deserialize)]
+#[cfg_attr(feature = "server", derive(Serialize))]
 pub struct LynxElementData {
   pub(crate) parent_component_unique_id: usize,
   pub(crate) css_id: i32,
   pub(crate) component_id: Option<String>,
+  #[with(rkyv::with::Skip)]
   pub(crate) dataset: Option<js_sys::Object>,
+  #[with(rkyv::with::Skip)]
   pub(crate) component_config: Option<js_sys::Object>,
   pub(crate) event_handlers_map: Option<FnvHashMap<String, EventHandler>>,
   // /**
