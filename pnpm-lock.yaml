@@ -262,7 +262,7 @@ importers:
         version: 3.6.0
       '@rsbuild/plugin-babel':
         specifier: 1.0.6
-        version: 1.0.6(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))
+        version: 1.0.6(@rsbuild/core@1.7.2)
       '@types/react':
         specifier: ^18.3.27
         version: 18.3.27
@@ -372,7 +372,7 @@ importers:
     dependencies:
       zx:
         specifier: ^8.8.4
-        version: 8.8.5
+        version: 8.8.4
 
   packages/lynx/gesture-runtime:
     devDependencies:
@@ -920,10 +920,10 @@ importers:
         version: link:../../web-platform/web-elements
       '@rsbuild/plugin-less':
         specifier: 1.6.0
-        version: 1.6.0(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))
+        version: 1.6.0(@rsbuild/core@1.7.2)
       '@rsbuild/plugin-sass':
         specifier: 1.5.0
-        version: 1.5.0(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))
+        version: 1.5.0(@rsbuild/core@1.7.2)
       commander:
         specifier: ^13.1.0
         version: 13.1.0
@@ -938,7 +938,7 @@ importers:
         version: 1.1.1
       rsbuild-plugin-tailwindcss:
         specifier: 0.2.3
-        version: 0.2.3(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))(tailwindcss@3.4.19)
+        version: 0.2.3(@rsbuild/core@1.7.2)(tailwindcss@3.4.19)
       rslog:
         specifier: ^1.2.11
         version: 1.2.11
@@ -1222,6 +1222,9 @@ importers:
       nyc:
         specifier: ^17.1.0
         version: 17.1.0
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.9)(@vitest/ui@3.2.4)(jsdom@27.4.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.31.6)
 
   packages/web-platform/web-elements:
     devDependencies:
@@ -1758,13 +1761,13 @@ importers:
         version: 7.32.2(@types/node@24.10.9)
       '@rsbuild/plugin-sass':
         specifier: 1.5.0
-        version: 1.5.0(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))
+        version: 1.5.0(@rsbuild/core@1.7.2)
       '@rsbuild/plugin-type-check':
         specifier: 1.3.3
-        version: 1.3.3(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))(@rspack/core@1.7.4(@swc/helpers@0.5.18))(typescript@5.9.3)
+        version: 1.3.3(@rsbuild/core@1.7.2)(@rspack/core@1.7.4(@swc/helpers@0.5.18))(typescript@5.9.3)
       '@rsbuild/plugin-typed-css-modules':
         specifier: 1.2.1
-        version: 1.2.1(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))
+        version: 1.2.1(@rsbuild/core@1.7.2)
       '@rspress/core':
         specifier: 2.0.1
         version: 2.0.1(@types/react@19.2.10)(core-js@3.47.0)
@@ -9802,8 +9805,8 @@ packages:
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
-  zx@8.8.5:
-    resolution: {integrity: sha512-SNgDF5L0gfN7FwVOdEFguY3orU5AkfFZm9B5YSHog/UDHv+lvmd82ZAsOenOkQixigwH2+yyH198AwNdKhj+RA==}
+  zx@8.8.4:
+    resolution: {integrity: sha512-44GcD+ZlM/v1OQtbwnSxLPcoE1ZEUICmR+RSbJZLAqfIixNLuMjLyh0DcS75OyfJ/sWYAwCWDmDvJ4hdnANAPQ==}
     engines: {node: '>= 12.17.0'}
     hasBin: true
 
@@ -11868,13 +11871,13 @@ snapshots:
     optionalDependencies:
       core-js: 3.47.0
 
-  '@rsbuild/plugin-babel@1.0.6(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))':
+  '@rsbuild/plugin-babel@1.0.6(@rsbuild/core@1.7.2)':
     dependencies:
       '@babel/core': 7.28.6
       '@babel/plugin-proposal-decorators': 7.28.0(@babel/core@7.28.6)
       '@babel/plugin-transform-class-properties': 7.27.1(@babel/core@7.28.6)
       '@babel/preset-typescript': 7.28.5(@babel/core@7.28.6)
-      '@rsbuild/core': 2.0.0-beta.0(core-js@3.47.0)
+      '@rsbuild/core': 1.7.2
       '@types/babel__core': 7.20.5
       deepmerge: 4.3.1
       reduce-configs: 1.1.1
@@ -11914,9 +11917,9 @@ snapshots:
     optionalDependencies:
       '@rsbuild/core': 1.7.2
 
-  '@rsbuild/plugin-less@1.6.0(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))':
+  '@rsbuild/plugin-less@1.6.0(@rsbuild/core@1.7.2)':
     dependencies:
-      '@rsbuild/core': 2.0.0-beta.0(core-js@3.47.0)
+      '@rsbuild/core': 1.7.2
       deepmerge: 4.3.1
       reduce-configs: 1.1.1
 
@@ -11937,15 +11940,6 @@ snapshots:
       reduce-configs: 1.1.1
       sass-embedded: 1.97.3
 
-  '@rsbuild/plugin-sass@1.5.0(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))':
-    dependencies:
-      '@rsbuild/core': 2.0.0-beta.0(core-js@3.47.0)
-      deepmerge: 4.3.1
-      loader-utils: 2.0.4
-      postcss: 8.5.6
-      reduce-configs: 1.1.1
-      sass-embedded: 1.97.3
-
   '@rsbuild/plugin-source-build@1.0.3(@rsbuild/core@1.7.2)':
     dependencies:
       fast-glob: 3.3.3
@@ -11953,6 +11947,18 @@ snapshots:
       yaml: 2.8.1
     optionalDependencies:
       '@rsbuild/core': 1.7.2
+
+  '@rsbuild/plugin-type-check@1.3.3(@rsbuild/core@1.7.2)(@rspack/core@1.7.4(@swc/helpers@0.5.18))(typescript@5.9.3)':
+    dependencies:
+      deepmerge: 4.3.1
+      json5: 2.2.3
+      reduce-configs: 1.1.1
+      ts-checker-rspack-plugin: 1.2.6(@rspack/core@1.7.4(@swc/helpers@0.5.18))(typescript@5.9.3)
+    optionalDependencies:
+      '@rsbuild/core': 1.7.2
+    transitivePeerDependencies:
+      - '@rspack/core'
+      - typescript
 
   '@rsbuild/plugin-type-check@1.3.3(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))(@rspack/core@1.7.4(@swc/helpers@0.5.18))(typescript@5.9.3)':
     dependencies:
@@ -11969,10 +11975,6 @@ snapshots:
   '@rsbuild/plugin-typed-css-modules@1.2.1(@rsbuild/core@1.7.2)':
     optionalDependencies:
       '@rsbuild/core': 1.7.2
-
-  '@rsbuild/plugin-typed-css-modules@1.2.1(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))':
-    optionalDependencies:
-      '@rsbuild/core': 2.0.0-beta.0(core-js@3.47.0)
 
   '@rsdoctor/client@1.2.3': {}
 
@@ -18061,12 +18063,6 @@ snapshots:
     optionalDependencies:
       '@rsbuild/core': 1.7.2
 
-  rsbuild-plugin-tailwindcss@0.2.3(@rsbuild/core@2.0.0-beta.0(core-js@3.47.0))(tailwindcss@3.4.19):
-    dependencies:
-      tailwindcss: 3.4.19
-    optionalDependencies:
-      '@rsbuild/core': 2.0.0-beta.0(core-js@3.47.0)
-
   rslog@1.2.11: {}
 
   run-applescript@7.0.0: {}
@@ -19705,4 +19701,4 @@ snapshots:
 
   zwitch@2.0.4: {}
 
-  zx@8.8.5: {}
+  zx@8.8.4: {}
