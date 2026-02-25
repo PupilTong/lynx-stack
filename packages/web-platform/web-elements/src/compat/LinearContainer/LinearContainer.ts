@@ -42,15 +42,15 @@ import {
  * it fixed in 116.0.5806.0, detail: https://issues.chromium.org/issues/40270007
  *
  * so we limit this feature to chrome 117, safari 18, firefox no:
- * rex unit: chrome 111, safari 17.2, firefox no
- *  https://developer.mozilla.org/en-US/docs/Web/CSS/length
+ * -webkit-box-reflect: chrome 4, safari 4, firefox no
+ *  https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/-webkit-box-reflect
  * transition-behavior:allow-discrete: chrome 117, safari 18, firefox 125
  *  https://developer.mozilla.org/en-US/docs/Web/CSS/transition-behavior
  *  https://caniuse.com/mdn-css_properties_display_is_transitionable
  *
  * update this once firefox supports this.
  */
-const supportContainerStyleQuery = CSS.supports('width:1rex')
+const supportContainerStyleQuery = CSS.supports('-webkit-box-reflect: above')
   && CSS.supports('transition-behavior:allow-discrete')
   && CSS.supports('content-visibility: auto');
 

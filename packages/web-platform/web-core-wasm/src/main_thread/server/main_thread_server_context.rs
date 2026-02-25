@@ -199,7 +199,22 @@ impl MainThreadServerContext {
               buffer.push(' ');
               buffer.push_str(key);
               buffer.push_str("=\"");
-              buffer.push_str(value); // TODO: Escape value
+
+              let mut last_escape = 0;
+              for (i, b) in value.bytes().enumerate() {
+                let replacement = match b {
+                  b'"' => "&quot;",
+                  b'&' => "&amp;",
+                  b'<' => "&lt;",
+                  b'>' => "&gt;",
+                  _ => continue,
+                };
+                buffer.push_str(&value[last_escape..i]);
+                buffer.push_str(replacement);
+                last_escape = i + 1;
+              }
+              buffer.push_str(&value[last_escape..]);
+
               buffer.push('"');
             }
 

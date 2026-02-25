@@ -93,7 +93,7 @@ export const templateScrollView = `<style>
     part="bot-fade-mask"
   ></div>`;
 export const templateXAudioTT = `<audio id="audio"></audio>`;
-const XSSDetector = /<\s*script/g;
+const XSSDetector = /<\s*script/;
 export const templateXImage = (attributes: { src?: string }) => {
   const { src } = attributes;
   if (src && XSSDetector.test(src)) {

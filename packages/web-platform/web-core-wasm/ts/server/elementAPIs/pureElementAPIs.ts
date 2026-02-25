@@ -89,7 +89,7 @@ export const __SetEvents: SetEventsPAPI = () => {
 };
 
 export const __UpdateListCallbacks: UpdateListCallbacksPAPI = () => {
-  throw new Error('__UpdateListCallbacks is not implemented in SSR');
+  // No-op in SSR
 };
 
 // __GetConfig uses GetElementConfigPAPI
@@ -125,7 +125,7 @@ export const __AddDataset: AddDatasetPAPI = (
   _key: string,
   _value: Cloneable,
 ) => {
-  throw new Error('__AddDataset is not implemented in SSR');
+  // No-op in SSR
 };
 
 export const __GetDataByKey: GetDataByKeyPAPI = (
