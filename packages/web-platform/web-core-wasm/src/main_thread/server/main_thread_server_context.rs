@@ -10,6 +10,7 @@ use crate::style_transformer::{query_transform_rules, transform_inline_style_str
 use crate::template::template_sections::style_info::css_property::CSSProperty;
 use crate::template::template_sections::style_info::StyleSheetResource;
 // use crate::constants;
+use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -96,6 +97,29 @@ impl MainThreadServerContext {
     }
   }
 
+  pub fn set_inline_styles(
+    &mut self,
+    element_id: usize,
+    keys: js_sys::Array,
+    values: js_sys::Array,
+  ) {
+    if let Some(Some(element)) = self.elements.get_mut(element_id) {
+      for i in 0..keys.length() {
+        if let (Some(key), Some(value)) = (keys.get(i).as_string(), values.get(i).as_string()) {
+          let property_id: CSSProperty = key.as_str().into();
+          let (transformed, _) = query_transform_rules(&property_id, &value);
+          if transformed.is_empty() {
+            element.set_style(key, value);
+          } else {
+            for (k, v) in transformed {
+              element.set_style(k.to_string(), v.to_string());
+            }
+          }
+        }
+      }
+    }
+  }
+
   pub fn generate_html(&self, element_id: usize) -> String {
     let mut buffer = String::with_capacity(4096);
     buffer.push_str("<lynx-view");
@@ -160,7 +184,8 @@ impl MainThreadServerContext {
       Close(usize),
     }
 
-    let mut stack = vec![Action::Open(root_id)];
+    let mut stack = Vec::with_capacity(64);
+    stack.push(Action::Open(root_id));
 
     while let Some(action) = stack.pop() {
       match action {
@@ -180,31 +205,38 @@ impl MainThreadServerContext {
 
             buffer.push('>');
 
-            let template_str = match element.tag_name.as_str() {
-              "scroll-view" => Some(web_elements::template::TEMPLATE_SCROLL_VIEW.to_string()),
-              "x-audio-tt" => Some(web_elements::template::TEMPLATE_X_AUDIO_TT.to_string()),
+            let template_str: Option<Cow<'static, str>> = match element.tag_name.as_str() {
+              "scroll-view" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_SCROLL_VIEW)),
+              "x-audio-tt" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_AUDIO_TT)),
               "x-image" => web_elements::template::template_x_image(
                 element.attributes.get("src").map(|s| s.as_str()),
               )
-              .ok(),
+              .ok()
+              .map(Cow::Owned),
               "filter-image" => web_elements::template::template_filter_image(
                 element.attributes.get("src").map(|s| s.as_str()),
               )
-              .ok(),
+              .ok()
+              .map(Cow::Owned),
               "inline-image" => web_elements::template::template_inline_image(
                 element.attributes.get("src").map(|s| s.as_str()),
               )
-              .ok(),
-              "x-input" => Some(web_elements::template::TEMPLATE_X_INPUT.to_string()),
-              "x-list" => Some(web_elements::template::TEMPLATE_X_LIST.to_string()),
-              "x-overlay-ng" => Some(web_elements::template::TEMPLATE_X_OVERLAY_NG.to_string()),
-              "x-refresh-view" => Some(web_elements::template::TEMPLATE_X_REFRESH_VIEW.to_string()),
-              "x-svg" => Some(web_elements::template::template_x_svg()),
-              "x-swiper" => Some(web_elements::template::TEMPLATE_X_SWIPER.to_string()),
-              "x-text" => Some(web_elements::template::TEMPLATE_X_TEXT.to_string()),
-              "x-textarea" => Some(web_elements::template::TEMPLATE_X_TEXTAREA.to_string()),
-              "x-viewpager-ng" => Some(web_elements::template::TEMPLATE_X_VIEWPAGE_NG.to_string()),
-              "x-web-view" => Some(web_elements::template::TEMPLATE_X_WEB_VIEW.to_string()),
+              .ok()
+              .map(Cow::Owned),
+              "x-input" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_INPUT)),
+              "x-list" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_LIST)),
+              "x-overlay-ng" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_OVERLAY_NG)),
+              "x-refresh-view" => Some(Cow::Borrowed(
+                web_elements::template::TEMPLATE_X_REFRESH_VIEW,
+              )),
+              "x-svg" => Some(Cow::Owned(web_elements::template::template_x_svg())),
+              "x-swiper" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_SWIPER)),
+              "x-text" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_TEXT)),
+              "x-textarea" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_TEXTAREA)),
+              "x-viewpager-ng" => Some(Cow::Borrowed(
+                web_elements::template::TEMPLATE_X_VIEWPAGE_NG,
+              )),
+              "x-web-view" => Some(Cow::Borrowed(web_elements::template::TEMPLATE_X_WEB_VIEW)),
               _ => None,
             };
 

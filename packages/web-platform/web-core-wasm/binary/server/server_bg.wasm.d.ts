@@ -22,6 +22,7 @@ export const mainthreadservercontext_get_tag: (a: number, b: number) => [number,
 export const mainthreadservercontext_new: (a: number, b: number) => number;
 export const mainthreadservercontext_push_style_sheet: (a: number, b: number, c: number, d: number) => [number, number];
 export const mainthreadservercontext_set_attribute: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+export const mainthreadservercontext_set_inline_styles: (a: number, b: number, c: any, d: any) => void;
 export const mainthreadservercontext_set_style: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const mainthreadservercontext_update_css_og_style: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
 export const rawstyleinfo_append_import: (a: number, b: number, c: number) => void;

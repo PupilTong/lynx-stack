@@ -47,12 +47,15 @@ fn test_template_sync() {
         });
     "#;
 
-  // Use `pnpm exec node` or just `node`. Assuming `node` works nicely in repository dir since it's a JS environment.
-  let output = Command::new("node")
-    .arg("-e")
+  // Connect to the node environment via bash to ensure we pick up the user's configuration
+  let output = Command::new("bash")
+    .arg("-l")
+    .arg("-c")
+    .arg("node -e \"$1\"")
+    .arg("--")
     .arg(script)
     .output()
-    .expect("Failed to execute node");
+    .expect("Failed to execute bash");
 
   assert!(
     output.status.success(),

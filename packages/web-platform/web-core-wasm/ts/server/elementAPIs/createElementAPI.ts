@@ -407,10 +407,9 @@ export function createElementAPI(
       if (typeof value === 'string') {
         wasmContext.set_attribute(id, 'style', value);
       } else if (value && typeof value === 'object') {
-        Object.entries(value).forEach(([k, v]) => {
-          // TODO: This loop can be optimized in WASM side if we had bulk update
-          wasmContext.set_style(id, k, v as string);
-        });
+        const keys = Object.keys(value);
+        const values = keys.map((k) => String((value as any)[k]));
+        wasmContext.set_inline_styles(id, keys, values);
       }
     }) as SetInlineStylesPAPI,
 

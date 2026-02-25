@@ -15,6 +15,7 @@ export class MainThreadServerContext {
     constructor(view_attributes: string);
     push_style_sheet(resource: StyleSheetResource, entry_name?: string | null): void;
     set_attribute(element_id: number, key: string, value: string): void;
+    set_inline_styles(element_id: number, keys: Array<any>, values: Array<any>): void;
     set_style(element_id: number, key: string, value: string): void;
     update_css_og_style(unique_id: number, css_id: number, class_names: string[], entry_name?: string | null): void;
 }
