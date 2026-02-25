@@ -17,7 +17,6 @@
     "test:update": "playwright test --ui --update-snapshots"
   },
   "devDependencies": {
-    "@codspeed/vitest-plugin": "^4.0.1",
     "@lynx-js/playwright-fixtures": "workspace:*",
     "@lynx-js/react": "workspace:*",
     "@lynx-js/react-rsbuild-plugin": "workspace:*",

@@ -1201,9 +1201,6 @@ importers:
 
   packages/web-platform/web-core-wasm-e2e:
     devDependencies:
-      '@codspeed/vitest-plugin':
-        specifier: ^4.0.1
-        version: 4.0.1(vite@5.4.2(@types/node@24.10.9)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.31.6))(vitest@3.2.4)
       '@lynx-js/playwright-fixtures':
         specifier: workspace:*
         version: link:../playwright-fixtures
@@ -1233,7 +1230,7 @@ importers:
         version: 3.8.1
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.9)(@vitest/ui@3.2.4)(jsdom@27.4.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.31.6)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.13)(@vitest/ui@3.2.4)(jsdom@27.4.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.31.6)
 
   packages/web-platform/web-elements:
     devDependencies:
