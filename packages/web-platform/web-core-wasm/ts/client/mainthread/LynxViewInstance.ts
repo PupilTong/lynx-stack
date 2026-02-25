@@ -58,7 +58,6 @@ export class LynxViewInstance implements AsyncDisposable {
   readonly exposureServices: ExposureServices;
   readonly webElementsLoadingPromises: Promise<void>[] = [];
 
-  #renderPageFunction: ((data: Cloneable) => void) | null = null;
   #queryComponentCache: Map<string, Promise<unknown>> = new Map();
   #pageConfig?: PageConfig;
   #nativeModulesMap: NativeModulesMap;
@@ -121,19 +120,6 @@ export class LynxViewInstance implements AsyncDisposable {
         this,
       ),
     );
-    Object.defineProperty(this.mainThreadGlobalThis, 'renderPage', {
-      get: () => {
-        return this.#renderPageFunction;
-      },
-      set: (v) => {
-        this.#renderPageFunction = v;
-        queueMicrotask(() => {
-          this.onMTSScriptsExecuted();
-        });
-      },
-      configurable: true,
-      enumerable: true,
-    });
   }
 
   onStyleInfoReady(
@@ -150,7 +136,7 @@ export class LynxViewInstance implements AsyncDisposable {
     }
   }
 
-  onMTSScriptsLoaded(currentUrl: string, isLazy: boolean) {
+  async onMTSScriptsLoaded(currentUrl: string, isLazy: boolean) {
     this.backgroundThread.markTiming('lepus_execute_start');
     const urlMap = templateManager.getTemplate(currentUrl)
       ?.lepusCode as Record<string, string>;
@@ -159,9 +145,10 @@ export class LynxViewInstance implements AsyncDisposable {
       urlMap,
     );
     if (!isLazy) {
-      this.mtsRealm.loadScript(
+      await this.mtsRealm.loadScript(
         urlMap['root']!,
       );
+      this.onMTSScriptsExecuted();
     }
   }
 
@@ -184,7 +171,7 @@ export class LynxViewInstance implements AsyncDisposable {
       this.#nativeModulesMap,
       this.#napiModulesMap,
     );
-    this.#renderPageFunction?.(processedData);
+    this.mainThreadGlobalThis.renderPage?.(processedData);
     this.mainThreadGlobalThis.__FlushElementTree();
   }
 

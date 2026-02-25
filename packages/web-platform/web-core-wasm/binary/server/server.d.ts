@@ -8,8 +8,11 @@ export class MainThreadServerContext {
     append_child(parent_id: number, child_id: number): void;
     create_element(tag_name: string): number;
     generate_html(element_id: number): string;
+    get_attribute(element_id: number, key: string): string | undefined;
+    get_attributes(element_id: number): object;
     get_page_css(): string;
-    constructor(templates: object, view_attributes: string);
+    get_tag(element_id: number): string | undefined;
+    constructor(view_attributes: string);
     push_style_sheet(resource: StyleSheetResource, entry_name?: string | null): void;
     set_attribute(element_id: number, key: string, value: string): void;
     set_style(element_id: number, key: string, value: string): void;

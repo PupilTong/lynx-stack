@@ -1201,6 +1201,9 @@ importers:
 
   packages/web-platform/web-core-wasm-e2e:
     devDependencies:
+      '@codspeed/vitest-plugin':
+        specifier: ^4.0.1
+        version: 4.0.1(vite@5.4.2(@types/node@24.10.9)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.31.6))(vitest@3.2.4)
       '@lynx-js/playwright-fixtures':
         specifier: workspace:*
         version: link:../playwright-fixtures
@@ -8252,6 +8255,7 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   qs@6.13.0:

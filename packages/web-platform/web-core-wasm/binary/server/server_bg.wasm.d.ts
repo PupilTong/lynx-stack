@@ -15,8 +15,11 @@ export const mainthreadservercontext_add_class: (a: number, b: number, c: number
 export const mainthreadservercontext_append_child: (a: number, b: number, c: number) => void;
 export const mainthreadservercontext_create_element: (a: number, b: number, c: number) => number;
 export const mainthreadservercontext_generate_html: (a: number, b: number) => [number, number];
+export const mainthreadservercontext_get_attribute: (a: number, b: number, c: number, d: number) => [number, number];
+export const mainthreadservercontext_get_attributes: (a: number, b: number) => [number, number, number];
 export const mainthreadservercontext_get_page_css: (a: number) => [number, number];
-export const mainthreadservercontext_new: (a: any, b: number, c: number) => number;
+export const mainthreadservercontext_get_tag: (a: number, b: number) => [number, number];
+export const mainthreadservercontext_new: (a: number, b: number) => number;
 export const mainthreadservercontext_push_style_sheet: (a: number, b: number, c: number, d: number) => [number, number];
 export const mainthreadservercontext_set_attribute: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const mainthreadservercontext_set_style: (a: number, b: number, c: number, d: number, e: number, f: number) => void;

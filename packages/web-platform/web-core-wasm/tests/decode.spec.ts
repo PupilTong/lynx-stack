@@ -182,7 +182,9 @@ describe('decodeTemplate', () => {
   });
 
   it('should handle custom sections', () => {
-    const customData = new Uint8Array([10, 20]);
+    const customObj = { custom: 'data' };
+    const jsonStr = JSON.stringify(customObj);
+    const customData = new Uint8Array(Buffer.from(jsonStr, 'utf16le'));
 
     const buffer = createTemplate({
       sections: [
@@ -191,6 +193,6 @@ describe('decodeTemplate', () => {
     });
 
     const result = decodeTemplate(buffer);
-    expect(result.customSections).toEqual(customData);
+    expect(result.customSections).toEqual(customObj);
   });
 });

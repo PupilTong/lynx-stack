@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import codspeed from '@codspeed/vitest-plugin';
 import * as path from 'path';
 
 export default defineConfig({
@@ -16,6 +17,13 @@ export default defineConfig({
   },
   test: {
     include: ['server-tests/**/*.test.ts'],
+    exclude: ['bench/**/*.bench.vitest.spec.ts'],
     testTimeout: 10000,
+    benchmark: {
+      include: ['bench/**/*.bench.vitest.spec.ts'],
+    },
   },
+  plugins: [
+    process.env['CI'] ? codspeed() : undefined,
+  ],
 });

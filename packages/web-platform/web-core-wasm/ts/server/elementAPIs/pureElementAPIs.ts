@@ -42,8 +42,6 @@ import type {
 
 export interface ServerElement {
   [uniqueIdSymbol]: number;
-  tagName: string;
-  attributes: Record<string, string>;
 }
 
 export function getUniqueId(element: unknown): number {

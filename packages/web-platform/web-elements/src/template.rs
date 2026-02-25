@@ -1,15 +1,7 @@
-// Copyright 2024 The Lynx Authors. All rights reserved.
-// Licensed under the Apache License Version 2.0 that can be found in the
-// LICENSE file in the root directory of this source tree.
+// This file mirrors the implementation of `src/elements/htmlTemplates.ts`.
+// Any changes to the templates here must be synchronized with `htmlTemplates.ts`.
 
-// --- IMPORTANT SYNCHRONIZATION NOTICE ---
-// The templates defined in this file are mirrored in the pure Rust library `web_elements`.
-// If you modify, add, or remove any template in this file, you MUST ALSO update
-// the corresponding Rust implementation in `src/template.rs` to ensure they
-// remain exactly synchronized. Tests enforce this parity.
-// ----------------------------------------
-
-export const templateScrollView = `<style>
+pub const TEMPLATE_SCROLL_VIEW: &str = r#"<style>
   .placeholder-dom {
     display: none;
     flex: 0 0 0;
@@ -91,22 +83,36 @@ export const templateScrollView = `<style>
     class="mask placeholder-dom"
     id="bot-fade-mask"
     part="bot-fade-mask"
-  ></div>`;
-export const templateXAudioTT = `<audio id="audio"></audio>`;
-const XSSDetector = /<\s*script/g;
-export const templateXImage = (attributes: { src?: string }) => {
-  const { src } = attributes;
-  if (src && XSSDetector.test(src)) {
-    throw new Error(
-      'detected <script, this is a potential XSS attack, please check your src',
-    );
+  ></div>"#;
+
+pub const TEMPLATE_X_AUDIO_TT: &str = r#"<audio id="audio"></audio>"#;
+
+pub fn template_x_image(src: Option<&str>) -> Result<String, String> {
+  if let Some(src_str) = src {
+    let has_xss = src_str
+      .to_lowercase()
+      .split('<')
+      .skip(1)
+      .any(|part| part.trim_start().starts_with("script"));
+
+    if has_xss {
+      return Err(
+        "detected <script, this is a potential XSS attack, please check your src".to_string(),
+      );
+    }
+    Ok(format!(
+      r#"<img part="img" alt="" id="img" src="{src_str}"/> "#
+    ))
+  } else {
+    Ok(r#"<img part="img" alt="" id="img" /> "#.to_string())
   }
-  return `<img part="img" alt="" id="img" ${src ? `src="${src}"` : ''}/> `;
-};
+}
 
-export const templateFilterImage = templateXImage;
+pub fn template_filter_image(src: Option<&str>) -> Result<String, String> {
+  template_x_image(src)
+}
 
-export const templateXInput = `<style>
+pub const TEMPLATE_X_INPUT: &str = r#"<style>
   #input:focus {
     outline: none;
   }
@@ -123,8 +129,9 @@ export const templateXInput = `<style>
     inputmode="text"
     spell-check="true"
   />
-</form>`;
-export const templateXList = `<style>
+</form>"#;
+
+pub const TEMPLATE_X_LIST: &str = r#"<style>
   .placeholder-dom {
     display: none;
     flex: 0 0 0;
@@ -160,9 +167,9 @@ export const templateXList = `<style>
       id="lower-threshold-observer"
     ></div>
   </div>
-</div>`;
+</div>"#;
 
-export const templateXOverlayNg = `<style>
+pub const TEMPLATE_X_OVERLAY_NG: &str = r#"<style>
   #dialog[open] {
     top: 0;
     left: 0;
@@ -198,9 +205,9 @@ export const templateXOverlayNg = `<style>
     <slot></slot>
   </div>
   <div class="overlay-placeholder"></div>
-</dialog>`;
+</dialog>"#;
 
-export const templateXRefreshView = `<style>
+pub const TEMPLATE_X_REFRESH_VIEW: &str = r#"<style>
   .bounce-container {
     overflow: scroll;
     overscroll-behavior: contain;
@@ -245,13 +252,9 @@ export const templateXRefreshView = `<style>
     class="overflow-placeholder bounce-item"
     part="placeholder-bot"
   ></div>
-</div>`;
+</div>"#;
 
-/* https://bugs.webkit.org/show_bug.cgi?id=296048
-  The animation name should be defined in the template
-  This is a workaround for safari
-*/
-export const templateXSwiper = `<style>
+pub const TEMPLATE_X_SWIPER: &str = r#"<style>
   #bounce-padding {
     display: none;
     flex: 0 0 0;
@@ -301,14 +304,15 @@ export const templateXSwiper = `<style>
   <slot part="slot-start" name="circular-start" id="circular-start"></slot>
   <slot part="slot"></slot>
   <slot part="slot-end" name="circular-end" id="circular-end"></slot>
-</div>`;
+</div>"#;
 
-export const templateXText =
-  `<div id="inner-box" part="inner-box"><slot part="slot"></slot><slot name="inline-truncation"></slot></div>`;
+pub const TEMPLATE_X_TEXT: &str = r#"<div id="inner-box" part="inner-box"><slot part="slot"></slot><slot name="inline-truncation"></slot></div>"#;
 
-export const templateInlineImage = templateXImage;
+pub fn template_inline_image(src: Option<&str>) -> Result<String, String> {
+  template_x_image(src)
+}
 
-export const templateXTextarea = `<style>
+pub const TEMPLATE_X_TEXTAREA: &str = r#"<style>
   #textarea:focus,
   #textarea:focus-visible {
     border: inherit;
@@ -317,9 +321,9 @@ export const templateXTextarea = `<style>
 </style>
 <form id="form" part="form" method="dialog">
   <textarea id="textarea" part="textarea"></textarea>
-</form>`;
+</form>"#;
 
-export const templateXViewpageNg = `<style>
+pub const TEMPLATE_X_VIEWPAGE_NG: &str = r#"<style>
   #bounce-padding {
     display: none;
     flex: 0 0 0;
@@ -345,17 +349,17 @@ export const templateXViewpageNg = `<style>
 <div id="bounce-padding" part="bounce-padding"></div>
 <div id="content" part="content">
   <slot></slot>
-</div>`;
+</div>"#;
 
-export const templateXWebView = `<style>
+pub const TEMPLATE_X_WEB_VIEW: &str = r#"<style>
   iframe {
     width: 100%;
     height: 100%;
     border: none;
   }
 </style>
-<iframe id="webview" part="webview"></iframe>`;
+<iframe id="webview" part="webview"></iframe>"#;
 
-export const templateXSvg = () => {
-  return `<img part="img" alt="" loading="lazy" id="img" /> `;
-};
+pub fn template_x_svg() -> String {
+  r#"<img part="img" alt="" loading="lazy" id="img" /> "#.to_string()
+}

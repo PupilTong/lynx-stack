@@ -13,7 +13,7 @@ export function executeTemplate(
   globalProps: Cloneable,
   _initI18nResources: InitI18nResources,
   viewAttributes?: string,
-): Promise<string> {
+): string | undefined {
   const result = decodeTemplate(templateBuffer);
   const config = result.config;
 
@@ -29,11 +29,6 @@ export function executeTemplate(
     result.styleInfo,
   );
 
-  let resolveRender: (val: string) => void;
-  const renderPromise = new Promise<string>((resolve) => {
-    resolveRender = resolve;
-  });
-
   const sandbox: Record<string, any> = {
     module: { exports: {} },
     exports: {},
@@ -48,32 +43,6 @@ export function executeTemplate(
     __OnLifecycleEvent: () => {},
     ...elementAPIs,
   };
-
-  // Intercept renderPage assignment
-  // When assigned, schedule a microtask to execute it.
-  let renderPageFunction: ((data: Cloneable) => void) | null = null;
-  Object.defineProperty(sandbox, 'renderPage', {
-    get: () => {
-      return renderPageFunction;
-    },
-    set: (v) => {
-      renderPageFunction = v;
-      if (typeof v === 'function') {
-        // Removed: capturedRenderPage = true;
-        queueMicrotask(() => {
-          const processData = sandbox['processData'];
-          const processedData = processData
-            ? processData(initData)
-            : initData;
-          v(processedData);
-          elementAPIs.__FlushElementTree();
-          resolveRender(binding.ssrResult);
-        });
-      }
-    },
-    configurable: true,
-    enumerable: true,
-  });
 
   const context = vm.createContext(sandbox);
 
@@ -102,7 +71,17 @@ export function executeTemplate(
     vm.runInContext(wrappedCode, context, {
       filename: `root`,
     });
+    const renderPageFunction = sandbox['renderPage'];
+    if (typeof renderPageFunction === 'function') {
+      const processData = sandbox['processData'];
+      const processedData = processData
+        ? processData(initData)
+        : initData;
+      renderPageFunction(processedData);
+      elementAPIs.__FlushElementTree();
+      return binding.ssrResult;
+    }
   }
 
-  return renderPromise;
+  return undefined;
 }

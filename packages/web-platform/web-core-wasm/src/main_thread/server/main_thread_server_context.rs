@@ -16,28 +16,16 @@ use wasm_bindgen::prelude::*;
 pub struct MainThreadServerContext {
   elements: Vec<Option<LynxElementData>>,
   style_manager: StyleManagerServer,
-  element_templates: fnv::FnvHashMap<String, JsValue>,
   view_attributes: String,
 }
 
 #[wasm_bindgen]
 impl MainThreadServerContext {
   #[wasm_bindgen(constructor)]
-  pub fn new(templates: js_sys::Object, view_attributes: String) -> Self {
-    let mut element_templates = fnv::FnvHashMap::default();
-    let entries = js_sys::Object::entries(&templates);
-    for i in 0..entries.length() {
-      if let Ok(entry) = entries.get(i).dyn_into::<js_sys::Array>() {
-        if let (Some(key), value) = (entry.get(0).as_string(), entry.get(1)) {
-          element_templates.insert(key, value);
-        }
-      }
-    }
-
+  pub fn new(view_attributes: String) -> Self {
     Self {
       elements: Vec::new(),
       style_manager: StyleManagerServer::new(),
-      element_templates,
       view_attributes,
     }
   }
@@ -135,6 +123,34 @@ impl MainThreadServerContext {
       }
     }
   }
+
+  pub fn get_attribute(&self, element_id: usize, key: String) -> Option<String> {
+    if let Some(Some(element)) = self.elements.get(element_id) {
+      element.attributes.get(&key).cloned()
+    } else {
+      None
+    }
+  }
+
+  pub fn get_attributes(&self, element_id: usize) -> Result<js_sys::Object, JsValue> {
+    if let Some(Some(element)) = self.elements.get(element_id) {
+      let obj = js_sys::Object::new();
+      for (key, value) in &element.attributes {
+        js_sys::Reflect::set(&obj, &JsValue::from_str(key), &JsValue::from_str(value))?;
+      }
+      Ok(obj)
+    } else {
+      Ok(js_sys::Object::new())
+    }
+  }
+
+  pub fn get_tag(&self, element_id: usize) -> Option<String> {
+    if let Some(Some(element)) = self.elements.get(element_id) {
+      Some(element.tag_name.clone())
+    } else {
+      None
+    }
+  }
 }
 
 impl MainThreadServerContext {
@@ -164,27 +180,38 @@ impl MainThreadServerContext {
 
             buffer.push('>');
 
-            if let Some(template_val) = self.element_templates.get(&element.tag_name) {
-              let content_str_opt = if template_val.is_function() {
-                let func = template_val.unchecked_ref::<js_sys::Function>();
-                let attrs_obj = js_sys::Object::new();
-                for (k, v) in &element.attributes {
-                  let _ =
-                    js_sys::Reflect::set(&attrs_obj, &JsValue::from_str(k), &JsValue::from_str(v));
-                }
-                func
-                  .call1(&JsValue::NULL, &attrs_obj)
-                  .ok()
-                  .and_then(|v| v.as_string())
-              } else {
-                template_val.as_string()
-              };
+            let template_str = match element.tag_name.as_str() {
+              "scroll-view" => Some(web_elements::template::TEMPLATE_SCROLL_VIEW.to_string()),
+              "x-audio-tt" => Some(web_elements::template::TEMPLATE_X_AUDIO_TT.to_string()),
+              "x-image" => web_elements::template::template_x_image(
+                element.attributes.get("src").map(|s| s.as_str()),
+              )
+              .ok(),
+              "filter-image" => web_elements::template::template_filter_image(
+                element.attributes.get("src").map(|s| s.as_str()),
+              )
+              .ok(),
+              "inline-image" => web_elements::template::template_inline_image(
+                element.attributes.get("src").map(|s| s.as_str()),
+              )
+              .ok(),
+              "x-input" => Some(web_elements::template::TEMPLATE_X_INPUT.to_string()),
+              "x-list" => Some(web_elements::template::TEMPLATE_X_LIST.to_string()),
+              "x-overlay-ng" => Some(web_elements::template::TEMPLATE_X_OVERLAY_NG.to_string()),
+              "x-refresh-view" => Some(web_elements::template::TEMPLATE_X_REFRESH_VIEW.to_string()),
+              "x-svg" => Some(web_elements::template::template_x_svg()),
+              "x-swiper" => Some(web_elements::template::TEMPLATE_X_SWIPER.to_string()),
+              "x-text" => Some(web_elements::template::TEMPLATE_X_TEXT.to_string()),
+              "x-textarea" => Some(web_elements::template::TEMPLATE_X_TEXTAREA.to_string()),
+              "x-viewpager-ng" => Some(web_elements::template::TEMPLATE_X_VIEWPAGE_NG.to_string()),
+              "x-web-view" => Some(web_elements::template::TEMPLATE_X_WEB_VIEW.to_string()),
+              _ => None,
+            };
 
-              if let Some(content_str) = content_str_opt {
-                buffer.push_str(r#"<template shadowrootmode="open">"#);
-                buffer.push_str(&content_str);
-                buffer.push_str("</template>");
-              }
+            if let Some(content_str) = template_str {
+              buffer.push_str(r#"<template shadowrootmode="open">"#);
+              buffer.push_str(&content_str);
+              buffer.push_str("</template>");
             }
 
             stack.push(Action::Close(element_id));
@@ -212,8 +239,7 @@ mod tests {
 
   #[test]
   fn test_html_generation() {
-    let templates = js_sys::Object::new();
-    let mut ctx = MainThreadServerContext::new(templates);
+    let mut ctx = MainThreadServerContext::new("".to_string());
 
     // Create <div>
     let div_id = ctx.create_element("div".to_string());
