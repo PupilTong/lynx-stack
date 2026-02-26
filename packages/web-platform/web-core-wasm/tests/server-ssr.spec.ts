@@ -27,7 +27,7 @@ describe('Server SSR', () => {
     api.__AppendElement(view, text);
 
     // Flush to generate HTML
-    api.__FlushElementTree(page, {});
+    api.__FlushElementTree();
 
     // Retrieve result
     const html = binding.ssrResult;

@@ -25,7 +25,9 @@ import { createMainThreadGlobalAPIs } from './createMainThreadGlobalAPIs.js';
 import { templateManager } from './TemplateManager.js';
 import { loadAllWebElements } from '../webElementsDynamicLoader.js';
 import type { LynxViewElement } from './LynxView.js';
-loadAllWebElements();
+loadAllWebElements().catch((e) => {
+  console.error('[lynx-web] Failed to load web elements', e);
+});
 
 const pixelRatio = window.devicePixelRatio;
 const screenWidth = window.screen.availWidth * pixelRatio;

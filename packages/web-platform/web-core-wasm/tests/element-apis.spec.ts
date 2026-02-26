@@ -66,6 +66,12 @@ describe('Element APIs', () => {
     expect(mtsGlobalThis.__GetTag(ret)).toBe('view');
   });
 
+  test('__CreatePage tag reverse mapping', () => {
+    const ret = mtsGlobalThis.__CreatePage('test', 0);
+    // Even though it uses 'div' under the hood, __GetTag should reverse-map to 'page'
+    expect(mtsGlobalThis.__GetTag(ret)).toBe('page');
+  });
+
   test('__CreateScrollView', () => {
     const ret = mtsGlobalThis.__CreateScrollView(0);
     expect(mtsGlobalThis.__GetTag(ret)).toBe('scroll-view');

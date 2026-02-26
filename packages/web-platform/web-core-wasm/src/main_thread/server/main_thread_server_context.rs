@@ -207,6 +207,7 @@ impl MainThreadServerContext {
                   b'&' => "&amp;",
                   b'<' => "&lt;",
                   b'>' => "&gt;",
+                  b'\'' => "&#39;",
                   _ => continue,
                 };
                 buffer.push_str(&value[last_escape..i]);

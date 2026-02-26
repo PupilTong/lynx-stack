@@ -243,7 +243,16 @@ export function createElementAPI(
     }) as GetIDPAPI,
     __GetTag: ((element: HTMLElement) => {
       const el = getServerElement(element);
-      return wasmContext.get_tag(el[uniqueIdSymbol]) ?? '';
+      const tag = wasmContext.get_tag(el[uniqueIdSymbol]) ?? '';
+      // Reverse-map HTML tag to Lynx tag (consistent with CSR `__GetTag` behavior)
+      for (
+        const [lynxTag, htmlTag] of Object.entries(LYNX_TAG_TO_HTML_TAG_MAP)
+      ) {
+        if (tag === htmlTag) {
+          return lynxTag;
+        }
+      }
+      return tag;
     }) as GetTagPAPI,
     __GetAttributes: ((element: HTMLElement) => {
       const el = getServerElement(element);
@@ -418,9 +427,14 @@ export function createElementAPI(
       key: string | number,
       value: string | number | null | undefined,
     ) => {
+      // Rust `set_style` panics on empty string because removing style is not supported yet
+      // see main_thread_server_context.rs -> set_style -> query_transform_rules
+      if (value === null || value === undefined || value === '') {
+        return;
+      }
       const el = getServerElement(element);
       const keyStr = key.toString();
-      const valStr = value?.toString() ?? '';
+      const valStr = value.toString();
       wasmContext.set_style(el[uniqueIdSymbol], keyStr, valStr);
     }) as AddInlineStylePAPI,
 
