@@ -313,4 +313,17 @@ mod tests {
     // Verify initial CSS is empty
     assert_eq!(ctx.get_page_css(), "");
   }
+
+  #[test]
+  fn test_set_style_empty_value() {
+    let mut ctx = MainThreadServerContext::new("".to_string());
+    let div_id = ctx.create_element("div".to_string());
+
+    // This should not panic
+    ctx.set_style(div_id, "background-color".to_string(), "".to_string());
+
+    let html = ctx.generate_html(div_id);
+    // Should not contain the style property since we ignored the empty value
+    assert!(!html.contains("background-color:"));
+  }
 }

@@ -161,7 +161,7 @@ impl LynxElementData {
   pub(crate) fn set_style(&mut self, key: String, value: String) {
     if value.is_empty() {
       // In SSR we do not support remove style
-      panic!("Remove style is not supported in SSR");
+      return;
     }
     let style = self.attributes.entry("style".to_string()).or_default();
     style.push_str(&key);

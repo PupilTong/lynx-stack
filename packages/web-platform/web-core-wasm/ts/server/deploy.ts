@@ -18,7 +18,7 @@ export function executeTemplate(
   const config = result.config;
 
   const binding: SSRBinding = { ssrResult: '' };
-  const elementAPIs = createElementAPI(
+  const { globalThisAPIs: elementAPIs, wasmContext } = createElementAPI(
     binding,
     {
       enableCSSSelector: config['enableCSSSelector'] === 'true',

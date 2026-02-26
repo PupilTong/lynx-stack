@@ -63,7 +63,7 @@ Runs the application logic (BTS).
 TypeScript bindings for Server-Side Rendering (SSR).
 
 - **`wasm.ts`**: Loads the server-specific Wasm binary.
-- **`elementAPIs/createElementAPI.ts`**: Implements `ElementPAPIs` for the server, using `MainThreadServerContext` to generate HTML strings instead of manipulating DOM.
+- **`elementAPIs/createElementAPI.ts`**: Implements `ElementPAPIs` and returns the `wasmContext` for the server, using `MainThreadServerContext` to generate HTML strings instead of manipulating DOM.
 
 ### 4. Encoder (`ts/encode`)
 

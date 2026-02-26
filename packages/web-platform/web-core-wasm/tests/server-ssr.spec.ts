@@ -5,17 +5,23 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createElementAPI } from '../ts/server/index.js';
-import { MainThreadServerContext, SSRBinding } from '../ts/server/wasm.js';
+import { createElementAPI, type SSRBinding } from '../ts/server/index.js';
+import { MainThreadServerContext } from '../ts/server/wasm.js';
 
 describe('Server SSR', () => {
   it('should generate html correctly', () => {
-    const binding: SSRBinding = {};
-    const config = { enableCSSSelector: true };
-    const api = createElementAPI(binding, config);
+    const binding: SSRBinding = {
+      ssrResult: '',
+    };
+    const config = {
+      enableCSSSelector: true,
+      defaultOverflowVisible: false,
+      defaultDisplayLinear: true,
+    };
+    const { globalThisAPIs: api } = createElementAPI(binding, config);
 
     // Create Page
-    const page = api.__CreatePage(0, 0);
+    const page = api.__CreatePage('0', 0);
     // Add content to page
     const view = api.__CreateElement('view', 0);
     api.__SetAttribute(view, 'id', 'main');
@@ -48,7 +54,10 @@ describe('Server SSR', () => {
   it('should handle attributes and styles', () => {
     const binding: any = {};
     const config = { enableCSSSelector: true };
-    const api = createElementAPI(binding, config);
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      config,
+    );
 
     const el = api.__CreateElement('image', 0);
     api.__SetAttribute(el, 'src', 'http://example.com/img.png');
@@ -56,7 +65,6 @@ describe('Server SSR', () => {
     api.__AddInlineStyle(el, 'height', '100px');
 
     const uid = api.__GetElementUniqueID(el);
-    const wasmCtx = binding.wasmContext as MainThreadServerContext;
     const html = wasmCtx.generate_html(uid);
 
     console.log('Image HTML:', html);
@@ -68,16 +76,24 @@ describe('Server SSR', () => {
   });
 
   it('should transform styles', () => {
-    const binding: any = {};
-    const config = { enableCSSSelector: true };
-    const api = createElementAPI(binding, config);
+    const binding: SSRBinding = {
+      ssrResult: '',
+    };
+    const config = {
+      enableCSSSelector: true,
+      defaultOverflowVisible: false,
+      defaultDisplayLinear: true,
+    };
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      config,
+    );
 
     const el = api.__CreateElement('view', 0);
     // Test key-value transformation
     api.__AddInlineStyle(el, 'flex', '1');
 
     const uid = api.__GetElementUniqueID(el);
-    const wasmCtx = binding.wasmContext as MainThreadServerContext;
     let html = wasmCtx.generate_html(uid);
     // Check key-value transform (flex -> --flex)
     expect(html).toContain('--flex:1');

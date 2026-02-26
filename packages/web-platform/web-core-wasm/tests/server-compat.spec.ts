@@ -11,10 +11,16 @@ import { MainThreadServerContext } from '../ts/server/wasm.js';
 describe('Server Compat Tests', () => {
   it('basic-performance-div-10', () => {
     const binding: any = {};
-    const api = createElementAPI(binding);
-    const wasmCtx = binding.wasmContext as MainThreadServerContext;
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      {
+        enableCSSSelector: true,
+        defaultOverflowVisible: false,
+        defaultDisplayLinear: true,
+      },
+    );
 
-    const page = api.__CreatePage(0, 0);
+    const page = api.__CreatePage('0', 0);
 
     for (let i = 0; i < 10; i++) {
       const div = api.__CreateElement('div', 0);
@@ -30,10 +36,16 @@ describe('Server Compat Tests', () => {
 
   it('basic-performance-nest-level-100', () => {
     const binding: any = {};
-    const api = createElementAPI(binding);
-    const wasmCtx = binding.wasmContext as MainThreadServerContext;
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      {
+        enableCSSSelector: true,
+        defaultOverflowVisible: false,
+        defaultDisplayLinear: true,
+      },
+    );
 
-    const page = api.__CreatePage(0, 0);
+    const page = api.__CreatePage('0', 0);
 
     let parent = page;
     // index.jsx: App count={100}.
@@ -54,10 +66,16 @@ describe('Server Compat Tests', () => {
 
   it('basic-performance-event-div-100', () => {
     const binding: any = {};
-    const api = createElementAPI(binding);
-    const wasmCtx = binding.wasmContext as MainThreadServerContext;
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      {
+        enableCSSSelector: true,
+        defaultOverflowVisible: false,
+        defaultDisplayLinear: true,
+      },
+    );
 
-    const page = api.__CreatePage(0, 0);
+    const page = api.__CreatePage('0', 0);
 
     for (let i = 0; i < 100; i++) {
       const div = api.__CreateElement('div', 0);
@@ -76,7 +94,7 @@ describe('Server Compat Tests', () => {
       // Wait, `createElementAPI` maps `__AddEventListener` to `wasmCtx.add_event_listener`.
       // Let's check `createElementAPI.ts` implementation details.
       // __AddEvent(element, eventType, eventName, listenerId)
-      api.__AddEvent(div, 'bind', 'tap', `handleTap-${i}`);
+      api.__AddEvent(div, 'bindEvent', 'tap', `handleTap-${i}`);
       api.__AppendElement(page, div);
     }
 

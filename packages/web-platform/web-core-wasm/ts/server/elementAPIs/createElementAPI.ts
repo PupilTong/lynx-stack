@@ -96,13 +96,12 @@ export function createElementAPI(
     viewAttributes?: string;
   },
   styleInfo?: Uint8Array,
-): ElementPAPIs {
-  const wasmContext = new MainThreadServerContext(config?.viewAttributes ?? '');
+): { globalThisAPIs: ElementPAPIs; wasmContext: MainThreadServerContext } {
+  const wasmContext = new MainThreadServerContext(config.viewAttributes ?? '');
   if (styleInfo) {
     const resource = new StyleSheetResource(styleInfo, undefined);
     wasmContext.push_style_sheet(resource);
   }
-  (mtsBinding as any).wasmContext = wasmContext;
 
   let pageElementId: number | undefined;
 
@@ -234,218 +233,230 @@ export function createElementAPI(
     wasmContext.add_class(el[uniqueIdSymbol], className);
   };
 
-  const isCSSOG = !config?.enableCSSSelector;
+  const isCSSOG = !config.enableCSSSelector;
 
   return {
-    // Pure/Throwing Methods
-    __GetID: ((element: HTMLElement) => {
-      return getAttribute(element, 'id') ?? null;
-    }) as GetIDPAPI,
-    __GetTag: ((element: HTMLElement) => {
-      const el = getServerElement(element);
-      const tag = wasmContext.get_tag(el[uniqueIdSymbol]) ?? '';
-      // Reverse-map HTML tag to Lynx tag (consistent with CSR `__GetTag` behavior)
-      for (
-        const [lynxTag, htmlTag] of Object.entries(LYNX_TAG_TO_HTML_TAG_MAP)
-      ) {
-        if (tag === htmlTag) {
-          return lynxTag;
+    globalThisAPIs: {
+      // Pure/Throwing Methods
+      __GetID: ((element: HTMLElement) => {
+        return getAttribute(element, 'id') ?? null;
+      }) as GetIDPAPI,
+      __GetTag: ((element: HTMLElement) => {
+        const el = getServerElement(element);
+        const tag = wasmContext.get_tag(el[uniqueIdSymbol]) ?? '';
+        // Reverse-map HTML tag to Lynx tag (consistent with CSR `__GetTag` behavior)
+        for (
+          const [lynxTag, htmlTag] of Object.entries(LYNX_TAG_TO_HTML_TAG_MAP)
+        ) {
+          if (tag === htmlTag) {
+            return lynxTag;
+          }
         }
-      }
-      return tag;
-    }) as GetTagPAPI,
-    __GetAttributes: ((element: HTMLElement) => {
-      const el = getServerElement(element);
-      return wasmContext.get_attributes(el[uniqueIdSymbol]);
-    }) as GetAttributesPAPI,
-    __GetAttributeByName: (element: unknown, name: string) => {
-      return getAttribute(element, name) ?? null;
+        return tag;
+      }) as GetTagPAPI,
+      __GetAttributes: ((element: HTMLElement) => {
+        const el = getServerElement(element);
+        return wasmContext.get_attributes(el[uniqueIdSymbol]);
+      }) as GetAttributesPAPI,
+      __GetAttributeByName: (element: unknown, name: string) => {
+        return getAttribute(element, name) ?? null;
+      },
+      __GetClasses: ((element: HTMLElement) => {
+        const cls = getAttribute(element, 'class');
+        if (!cls) return [];
+        return cls.split(/\s+/).filter((c) => c.length > 0);
+      }) as GetClassesPAPI,
+      __GetParent,
+      __GetChildren,
+      __AddEvent,
+      __GetEvent,
+      __GetEvents,
+      __SetEvents,
+      __UpdateListCallbacks,
+      __GetConfig,
+      __SetConfig,
+      __GetElementConfig,
+      __GetComponentID,
+      __GetDataset,
+      __SetDataset,
+      __AddDataset,
+      __GetDataByKey,
+      __ElementIsEqual,
+      __GetElementUniqueID,
+      __FirstElement,
+      __LastElement,
+      __NextElement,
+      __RemoveElement,
+      __ReplaceElement,
+      __SwapElement,
+
+      __SetCSSId: isCSSOG ? __SetCSSIdForCSSOG : __SetCSSId,
+      __SetClasses: isCSSOG ? __SetClassesForCSSOG : __SetClasses,
+      __AddClass: isCSSOG ? __AddClassForCSSOG : __AddClass,
+
+      __AddConfig,
+      __UpdateComponentInfo,
+      __UpdateComponentID,
+      __MarkTemplateElement,
+      __MarkPartElement,
+      __GetTemplateParts,
+      __GetPageElement,
+      __InsertElementBefore,
+      __ReplaceElements,
+
+      // Context-Dependent Methods
+      __CreateView: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('x-view');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateViewPAPI,
+      __CreateText: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('x-text');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateTextPAPI,
+      __CreateImage: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('x-image');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateImagePAPI,
+      __CreateRawText: ((text: string) => {
+        const id = wasmContext.create_element('raw-text');
+        wasmContext.set_attribute(id, 'text', text);
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateRawTextPAPI,
+      __CreateScrollView: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('scroll-view');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateScrollViewPAPI,
+      __CreateElement: ((tagName: string, _parentComponentUniqueId: number) => {
+        const htmlTag = LYNX_TAG_TO_HTML_TAG_MAP[tagName] ?? tagName;
+        const id = wasmContext.create_element(htmlTag);
+        const el = { [uniqueIdSymbol]: id };
+        if (!config.enableCSSSelector) {
+          wasmContext.set_attribute(id, 'l-uid', id.toString());
+        }
+        return el as unknown as DecoratedHTMLElement;
+      }) as CreateElementPAPI,
+      __CreateComponent: ((
+        _parentComponentUniqueId: number,
+        _componentID: string,
+        _cssID: number,
+        entryName: string,
+        name: string,
+      ) => {
+        const id = wasmContext.create_element('x-view'); // Component host
+        const el = { [uniqueIdSymbol]: id } as ServerElement;
+        if (!config.enableCSSSelector) {
+          wasmContext.set_attribute(id, 'l-uid', id.toString());
+        }
+        if (entryName) {
+          wasmContext.set_attribute(id, 'lynx-entry-name', entryName);
+        }
+        if (name) {
+          wasmContext.set_attribute(id, 'name', name);
+        }
+        return el as unknown as DecoratedHTMLElement;
+      }) as CreateComponentPAPI,
+      __CreateWrapperElement: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('lynx-wrapper');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateWrapperElementPAPI,
+      __CreateList: ((_parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element('x-list');
+        return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
+      }) as CreateListPAPI,
+      __CreatePage: ((_componentID: string, _cssID: number) => {
+        const id = wasmContext.create_element('div');
+        pageElementId = id;
+        const el = { [uniqueIdSymbol]: id } as ServerElement;
+        if (!config.enableCSSSelector) {
+          wasmContext.set_attribute(id, 'l-uid', id.toString());
+        }
+        wasmContext.set_attribute(id, 'part', 'page');
+
+        if (config.defaultDisplayLinear === false) {
+          wasmContext.set_attribute(
+            id,
+            lynxDefaultDisplayLinearAttribute,
+            'false',
+          );
+        }
+        if (config.defaultOverflowVisible === true) {
+          wasmContext.set_attribute(
+            id,
+            'lynx-default-overflow-visible',
+            'true',
+          );
+        }
+
+        return el as unknown as DecoratedHTMLElement;
+      }) as CreatePagePAPI,
+
+      __AppendElement: ((parent: HTMLElement, child: HTMLElement) => {
+        const parentId = getUniqueId(parent);
+        const childId = getUniqueId(child);
+        wasmContext.append_child(parentId, childId);
+      }) as AppendElementPAPI,
+
+      __SetAttribute: ((
+        element: HTMLElement,
+        name: string,
+        value:
+          | string
+          | boolean
+          | null
+          | undefined
+          | UpdateListInfoAttributeValue,
+      ) => {
+        const el = getServerElement(element);
+        let valStr = '';
+        if (value == null) {
+          valStr = '';
+        } else {
+          valStr = value.toString();
+        }
+        wasmContext.set_attribute(el[uniqueIdSymbol], name, valStr);
+      }) as SetAttributePAPI & SetAttributePAPIUpdateListInfo,
+
+      __SetInlineStyles: ((
+        element: HTMLElement,
+        value: string | Record<string, string> | undefined,
+      ) => {
+        const el = getServerElement(element);
+        const id = el[uniqueIdSymbol];
+        if (typeof value === 'string') {
+          wasmContext.set_attribute(id, 'style', value);
+        } else if (value && typeof value === 'object') {
+          const keys = Object.keys(value);
+          const values = keys.map((k) => String((value as any)[k]));
+          wasmContext.set_inline_styles(id, keys, values);
+        }
+      }) as SetInlineStylesPAPI,
+
+      __AddInlineStyle: ((
+        element: HTMLElement,
+        key: string | number,
+        value: string | number | null | undefined,
+      ) => {
+        // Rust `set_style` panics on empty string because removing style is not supported yet
+        // see main_thread_server_context.rs -> set_style -> query_transform_rules
+        if (value === null || value === undefined || value === '') {
+          return;
+        }
+        const el = getServerElement(element);
+        const keyStr = key.toString();
+        const valStr = value.toString();
+        wasmContext.set_style(el[uniqueIdSymbol], keyStr, valStr);
+      }) as AddInlineStylePAPI,
+
+      __FlushElementTree: (() => {
+        if (pageElementId !== undefined) {
+          mtsBinding.ssrResult = wasmContext.generate_html(pageElementId);
+        }
+      }),
+
+      __SetID: ((element: HTMLElement, id: string | null) => {
+        setAttribute(element, 'id', id ?? '');
+      }) as SetIDPAPI,
     },
-    __GetClasses: ((element: HTMLElement) => {
-      const cls = getAttribute(element, 'class');
-      if (!cls) return [];
-      return cls.split(/\s+/).filter((c) => c.length > 0);
-    }) as GetClassesPAPI,
-    __GetParent,
-    __GetChildren,
-    __AddEvent,
-    __GetEvent,
-    __GetEvents,
-    __SetEvents,
-    __UpdateListCallbacks,
-    __GetConfig,
-    __SetConfig,
-    __GetElementConfig,
-    __GetComponentID,
-    __GetDataset,
-    __SetDataset,
-    __AddDataset,
-    __GetDataByKey,
-    __ElementIsEqual,
-    __GetElementUniqueID,
-    __FirstElement,
-    __LastElement,
-    __NextElement,
-    __RemoveElement,
-    __ReplaceElement,
-    __SwapElement,
-
-    __SetCSSId: isCSSOG ? __SetCSSIdForCSSOG : __SetCSSId,
-    __SetClasses: isCSSOG ? __SetClassesForCSSOG : __SetClasses,
-    __AddClass: isCSSOG ? __AddClassForCSSOG : __AddClass,
-
-    __AddConfig,
-    __UpdateComponentInfo,
-    __UpdateComponentID,
-    __MarkTemplateElement,
-    __MarkPartElement,
-    __GetTemplateParts,
-    __GetPageElement,
-    __InsertElementBefore,
-    __ReplaceElements,
-
-    // Context-Dependent Methods
-    __CreateView: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('x-view');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateViewPAPI,
-    __CreateText: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('x-text');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateTextPAPI,
-    __CreateImage: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('x-image');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateImagePAPI,
-    __CreateRawText: ((text: string) => {
-      const id = wasmContext.create_element('raw-text');
-      wasmContext.set_attribute(id, 'text', text);
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateRawTextPAPI,
-    __CreateScrollView: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('scroll-view');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateScrollViewPAPI,
-    __CreateElement: ((tagName: string, _parentComponentUniqueId: number) => {
-      const htmlTag = LYNX_TAG_TO_HTML_TAG_MAP[tagName] ?? tagName;
-      const id = wasmContext.create_element(htmlTag);
-      const el = { [uniqueIdSymbol]: id };
-      if (!config?.enableCSSSelector) {
-        wasmContext.set_attribute(id, 'l-uid', id.toString());
-      }
-      return el as unknown as DecoratedHTMLElement;
-    }) as CreateElementPAPI,
-    __CreateComponent: ((
-      _parentComponentUniqueId: number,
-      _componentID: string,
-      _cssID: number,
-      entryName: string,
-      name: string,
-    ) => {
-      const id = wasmContext.create_element('x-view'); // Component host
-      const el = { [uniqueIdSymbol]: id } as ServerElement;
-      if (!config?.enableCSSSelector) {
-        wasmContext.set_attribute(id, 'l-uid', id.toString());
-      }
-      if (entryName) {
-        wasmContext.set_attribute(id, 'lynx-entry-name', entryName);
-      }
-      if (name) {
-        wasmContext.set_attribute(id, 'name', name);
-      }
-      return el as unknown as DecoratedHTMLElement;
-    }) as CreateComponentPAPI,
-    __CreateWrapperElement: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('lynx-wrapper');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateWrapperElementPAPI,
-    __CreateList: ((_parentComponentUniqueId: number) => {
-      const id = wasmContext.create_element('x-list');
-      return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
-    }) as CreateListPAPI,
-    __CreatePage: ((_componentID: string, _cssID: number) => {
-      const id = wasmContext.create_element('div');
-      pageElementId = id;
-      const el = { [uniqueIdSymbol]: id } as ServerElement;
-      if (!config?.enableCSSSelector) {
-        wasmContext.set_attribute(id, 'l-uid', id.toString());
-      }
-      wasmContext.set_attribute(id, 'part', 'page');
-
-      if (config?.defaultDisplayLinear === false) {
-        wasmContext.set_attribute(
-          id,
-          lynxDefaultDisplayLinearAttribute,
-          'false',
-        );
-      }
-      if (config?.defaultOverflowVisible === true) {
-        wasmContext.set_attribute(id, 'lynx-default-overflow-visible', 'true');
-      }
-
-      return el as unknown as DecoratedHTMLElement;
-    }) as CreatePagePAPI,
-
-    __AppendElement: ((parent: HTMLElement, child: HTMLElement) => {
-      const parentId = getUniqueId(parent);
-      const childId = getUniqueId(child);
-      wasmContext.append_child(parentId, childId);
-    }) as AppendElementPAPI,
-
-    __SetAttribute: ((
-      element: HTMLElement,
-      name: string,
-      value: string | boolean | null | undefined | UpdateListInfoAttributeValue,
-    ) => {
-      const el = getServerElement(element);
-      let valStr = '';
-      if (value == null) {
-        valStr = '';
-      } else {
-        valStr = value.toString();
-      }
-      wasmContext.set_attribute(el[uniqueIdSymbol], name, valStr);
-    }) as SetAttributePAPI & SetAttributePAPIUpdateListInfo,
-
-    __SetInlineStyles: ((
-      element: HTMLElement,
-      value: string | Record<string, string> | undefined,
-    ) => {
-      const el = getServerElement(element);
-      const id = el[uniqueIdSymbol];
-      if (typeof value === 'string') {
-        wasmContext.set_attribute(id, 'style', value);
-      } else if (value && typeof value === 'object') {
-        const keys = Object.keys(value);
-        const values = keys.map((k) => String((value as any)[k]));
-        wasmContext.set_inline_styles(id, keys, values);
-      }
-    }) as SetInlineStylesPAPI,
-
-    __AddInlineStyle: ((
-      element: HTMLElement,
-      key: string | number,
-      value: string | number | null | undefined,
-    ) => {
-      // Rust `set_style` panics on empty string because removing style is not supported yet
-      // see main_thread_server_context.rs -> set_style -> query_transform_rules
-      if (value === null || value === undefined || value === '') {
-        return;
-      }
-      const el = getServerElement(element);
-      const keyStr = key.toString();
-      const valStr = value.toString();
-      wasmContext.set_style(el[uniqueIdSymbol], keyStr, valStr);
-    }) as AddInlineStylePAPI,
-
-    __FlushElementTree: (() => {
-      if (pageElementId !== undefined) {
-        mtsBinding.ssrResult = wasmContext.generate_html(pageElementId);
-      }
-    }),
-
-    __SetID: ((element: HTMLElement, id: string | null) => {
-      setAttribute(element, 'id', id ?? '');
-    }) as SetIDPAPI,
+    wasmContext,
   };
 }

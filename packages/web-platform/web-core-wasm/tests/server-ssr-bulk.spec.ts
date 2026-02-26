@@ -6,7 +6,10 @@ describe('Server SSR Bulk Styles', () => {
   it('should handle object-based SetInlineStyles', () => {
     const binding: SSRBinding = {};
     const config = { enableCSSSelector: true };
-    const api = createElementAPI(binding, config);
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      config,
+    );
 
     const el = api.__CreateElement('view', 0);
     api.__SetAttribute(el, 'id', 'test-bulk');
@@ -19,7 +22,6 @@ describe('Server SSR Bulk Styles', () => {
     });
 
     const uid = api.__GetElementUniqueID(el);
-    const wasmCtx = (binding as any).wasmContext as MainThreadServerContext;
     const html = wasmCtx.generate_html(uid);
 
     console.log('Bulk Style HTML:', html);
@@ -32,7 +34,10 @@ describe('Server SSR Bulk Styles', () => {
   it('should handle numeric values in SetInlineStyles', () => {
     const binding: SSRBinding = {};
     const config = { enableCSSSelector: true };
-    const api = createElementAPI(binding, config);
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      config,
+    );
 
     const el = api.__CreateElement('view', 0);
 
@@ -43,7 +48,6 @@ describe('Server SSR Bulk Styles', () => {
     });
 
     const uid = api.__GetElementUniqueID(el);
-    const wasmCtx = (binding as any).wasmContext as MainThreadServerContext;
     const html = wasmCtx.generate_html(uid);
 
     console.log('Bulk Style Numeric HTML:', html);

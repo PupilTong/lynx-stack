@@ -83,6 +83,7 @@ export async function ssrMiddleware(
     } catch (err: any) {
       console.error('SSR Error:', err);
       res.statusCode = 500;
+      res.end('Internal Server Error');
     }
   } else {
     next();
