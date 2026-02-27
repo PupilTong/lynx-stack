@@ -2,9 +2,9 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-export const cssIdAttribute = /*#__PURE__*/ 'l-css-id' as const;
-
 export const lynxUniqueIdAttribute = /*#__PURE__*/ 'l-uid' as const;
+
+export const cssIdAttribute = /*#__PURE__*/ 'l-css-id' as const;
 
 export const lynxEntryNameAttribute = /*#__PURE__*/ 'l-e-name' as const;
 

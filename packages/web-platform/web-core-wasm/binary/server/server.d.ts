@@ -5,19 +5,23 @@ export class MainThreadServerContext {
     free(): void;
     [Symbol.dispose](): void;
     add_class(element_id: number, class_name: string): void;
+    add_inline_style_raw_string_key(element_id: number, key: string, value?: string | null): void;
     append_child(parent_id: number, child_id: number): void;
     create_element(tag_name: string): number;
     generate_html(element_id: number): string;
     get_attribute(element_id: number, key: string): string | undefined;
     get_attributes(element_id: number): object;
+    get_inline_styles_in_key_value_vec(element_id: number, k_v_vec: string[]): void;
     get_page_css(): string;
     get_tag(element_id: number): string | undefined;
-    constructor(view_attributes: string);
+    constructor(view_attributes: string, enable_css_selector: boolean);
     push_style_sheet(resource: StyleSheetResource, entry_name?: string | null): void;
+    remove_attribute(element_id: number, key: string): void;
     set_attribute(element_id: number, key: string, value: string): void;
-    set_inline_styles(element_id: number, keys: Array<any>, values: Array<any>): void;
-    set_style(element_id: number, key: string, value: string): void;
-    update_css_og_style(unique_id: number, css_id: number, class_names: string[], entry_name?: string | null): void;
+    set_css_id(elements_unique_id: Uint32Array, css_id: number, entry_name?: string | null): void;
+    set_inline_styles_in_str(element_id: number, styles: string): boolean;
+    set_inline_styles_number_key(element_id: number, key: number, value?: string | null): void;
+    update_css_og_style(unique_id: number, entry_name?: string | null): void;
 }
 
 export class RawStyleInfo {

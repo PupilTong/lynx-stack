@@ -5,7 +5,7 @@
  */
 use super::transformer::StyleTransformer;
 use crate::style_transformer::transformer::Generator;
-#[cfg(feature = "client")]
+#[cfg(any(feature = "client", feature = "server"))]
 use crate::utils::hyphenate_style_name::hyphenate_style_name;
 struct InlineStyleGenerator {
   string_buffer: String,
@@ -27,7 +27,7 @@ pub(crate) fn transform_inline_style_string(source: &str) -> String {
   generator.string_buffer
 }
 
-#[cfg(feature = "client")]
+#[cfg(any(feature = "client", feature = "server"))]
 pub(crate) fn transform_inline_style_key_value_vec(source: Vec<String>) -> String {
   let mut generator = InlineStyleGenerator {
     string_buffer: String::new(),

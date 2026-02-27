@@ -6,13 +6,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { createElementAPI } from '../ts/server/index.js';
-import { MainThreadServerContext } from '../ts/server/wasm.js';
 
 describe('Server Compat Tests', () => {
   it('basic-performance-div-10', () => {
     const binding: any = {};
-    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+    const { globalThisAPIs: api } = createElementAPI(
       binding,
+      undefined,
+      '',
       {
         enableCSSSelector: true,
         defaultOverflowVisible: false,
@@ -36,8 +37,10 @@ describe('Server Compat Tests', () => {
 
   it('basic-performance-nest-level-100', () => {
     const binding: any = {};
-    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+    const { globalThisAPIs: api } = createElementAPI(
       binding,
+      undefined,
+      '',
       {
         enableCSSSelector: true,
         defaultOverflowVisible: false,
@@ -66,8 +69,10 @@ describe('Server Compat Tests', () => {
 
   it('basic-performance-event-div-100', () => {
     const binding: any = {};
-    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+    const { globalThisAPIs: api } = createElementAPI(
       binding,
+      undefined,
+      '',
       {
         enableCSSSelector: true,
         defaultOverflowVisible: false,

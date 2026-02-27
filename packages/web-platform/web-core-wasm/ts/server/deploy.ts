@@ -18,15 +18,15 @@ export function executeTemplate(
   const config = result.config;
 
   const binding: SSRBinding = { ssrResult: '' };
-  const { globalThisAPIs: elementAPIs, wasmContext } = createElementAPI(
+  const { globalThisAPIs: elementAPIs } = createElementAPI(
     binding,
+    result.styleInfo,
+    viewAttributes ?? '',
     {
       enableCSSSelector: config['enableCSSSelector'] === 'true',
       defaultOverflowVisible: config['defaultOverflowVisible'] === 'true',
       defaultDisplayLinear: config['defaultDisplayLinear'] !== 'false', // Default to true if not present or 'true'
-      viewAttributes,
     },
-    result.styleInfo,
   );
 
   const sandbox: Record<string, any> = {

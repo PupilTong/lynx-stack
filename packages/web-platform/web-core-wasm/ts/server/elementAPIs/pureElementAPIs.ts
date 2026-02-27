@@ -40,7 +40,7 @@ import type {
   UpdateListCallbacksPAPI,
 } from '../../types/index.js';
 
-export interface ServerElement {
+export interface ServerElement extends HTMLElement {
   [uniqueIdSymbol]: number;
 }
 

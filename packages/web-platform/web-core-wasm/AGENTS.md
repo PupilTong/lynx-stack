@@ -99,7 +99,7 @@ This package uses a hybrid build system involving `pnpm`, `rsbuild`, and `cargo`
   2. Generates high-performance JS bindings with `wasm-bindgen`.
   3. Optimizes the binary size with `wasm-opt`.
   4. Builds three variants: `client` (browser runtime), `server` (SSR), and `encode` (build tool).
-- **`pnpm test`**: Runs `vitest`.
+- **`pnpm test`**: Runs `vitest`. Note: If you modify Rust code, you must run `pnpm build:wasm` first for the changes to take effect in the tests.
 
 ### Configuration
 

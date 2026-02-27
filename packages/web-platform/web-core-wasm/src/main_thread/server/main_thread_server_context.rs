@@ -6,7 +6,9 @@
 
 use super::style_manager_server::StyleManagerServer;
 use crate::main_thread::element_data::LynxElementData;
-use crate::style_transformer::{query_transform_rules, transform_inline_style_string};
+use crate::style_transformer::{
+  query_transform_rules, transform_inline_style_key_value_vec, transform_inline_style_string,
+};
 use crate::template::template_sections::style_info::css_property::CSSProperty;
 use crate::template::template_sections::style_info::StyleSheetResource;
 // use crate::constants;
@@ -18,16 +20,18 @@ pub struct MainThreadServerContext {
   elements: Vec<Option<LynxElementData>>,
   style_manager: StyleManagerServer,
   view_attributes: String,
+  enable_css_selector: bool,
 }
 
 #[wasm_bindgen]
 impl MainThreadServerContext {
   #[wasm_bindgen(constructor)]
-  pub fn new(view_attributes: String) -> Self {
+  pub fn new(view_attributes: String, enable_css_selector: bool) -> Self {
     Self {
       elements: Vec::new(),
       style_manager: StyleManagerServer::new(),
       view_attributes,
+      enable_css_selector,
     }
   }
 
@@ -42,13 +46,64 @@ impl MainThreadServerContext {
       .map_err(|e| JsError::new(&e))
   }
 
+  pub fn remove_attribute(&mut self, element_id: usize, key: String) {
+    if let Some(Some(element)) = self.elements.get_mut(element_id) {
+      element.attributes.remove(&key);
+    }
+  }
+
+  pub fn set_css_id(
+    &mut self,
+    elements_unique_id: Vec<usize>,
+    css_id: i32,
+    entry_name: Option<String>,
+  ) -> Result<(), JsError> {
+    for unique_id in elements_unique_id.into_iter() {
+      if let Some(entry_name) = &entry_name {
+        self.set_attribute(
+          unique_id,
+          crate::constants::LYNX_ENTRY_NAME_ATTRIBUTE.to_string(),
+          entry_name.clone(),
+        );
+      }
+      if css_id != 0 {
+        self.set_attribute(
+          unique_id,
+          crate::constants::CSS_ID_ATTRIBUTE.to_string(),
+          css_id.to_string(),
+        );
+      } else {
+        self.remove_attribute(unique_id, crate::constants::CSS_ID_ATTRIBUTE.to_string());
+      }
+      if let Some(Some(element_data)) = self.elements.get_mut(unique_id) {
+        element_data.css_id = css_id;
+      }
+      if !self.enable_css_selector {
+        self.update_css_og_style(unique_id, entry_name.clone())?;
+      }
+    }
+    Ok(())
+  }
+
   pub fn update_css_og_style(
     &mut self,
     unique_id: usize,
-    css_id: i32,
-    class_names: Vec<String>,
     entry_name: Option<String>,
   ) -> Result<(), JsError> {
+    let (css_id, class_names) = if let Some(Some(element)) = self.elements.get(unique_id) {
+      let css_id = element.css_id;
+      let class_names = if let Some(class_attr) = element.attributes.get("class") {
+        class_attr
+          .split_whitespace()
+          .map(|s| s.to_string())
+          .collect()
+      } else {
+        vec![]
+      };
+      (css_id, class_names)
+    } else {
+      (0, vec![])
+    };
     self
       .style_manager
       .update_css_og_style(unique_id, css_id, class_names, entry_name)
@@ -83,59 +138,67 @@ impl MainThreadServerContext {
     }
   }
 
-  pub fn set_style(&mut self, element_id: usize, key: String, value: String) {
-    if let Some(Some(element)) = self.elements.get_mut(element_id) {
-      let property_id: CSSProperty = key.as_str().into();
-      let (transformed, _) = query_transform_rules(&property_id, &value);
-      if transformed.is_empty() {
-        element.set_style(key, value);
-      } else {
-        for (k, v) in transformed {
-          element.set_style(k.to_string(), v.to_string());
-        }
-      }
-    }
-  }
-
-  pub fn set_inline_styles(
+  pub fn add_inline_style_raw_string_key(
     &mut self,
     element_id: usize,
-    keys: js_sys::Array,
-    values: js_sys::Array,
+    key: &str,
+    value: Option<String>,
   ) {
     if let Some(Some(element)) = self.elements.get_mut(element_id) {
-      for i in 0..keys.length() {
-        if let (Some(key), Some(value)) = (keys.get(i).as_string(), values.get(i).as_string()) {
-          let property_id: CSSProperty = key.as_str().into();
-          let (transformed, _) = query_transform_rules(&property_id, &value);
-          if transformed.is_empty() {
-            element.set_style(key, value);
-          } else {
-            for (k, v) in transformed {
-              element.set_style(k.to_string(), v.to_string());
-            }
+      if let Some(value) = value {
+        let property_id: CSSProperty = key.into();
+        let (transformed, _) = query_transform_rules(&property_id, &value);
+        if transformed.is_empty() {
+          element.set_style(key.to_string(), value);
+        } else {
+          for (k, v) in transformed {
+            element.set_style(k.to_string(), v.to_string());
           }
         }
       }
     }
   }
 
-  pub fn generate_html(&self, element_id: usize) -> String {
-    let mut buffer = String::with_capacity(4096);
-    buffer.push_str("<lynx-view");
-    if !self.view_attributes.is_empty() {
-      buffer.push(' ');
-      buffer.push_str(&self.view_attributes);
+  pub fn set_inline_styles_number_key(
+    &mut self,
+    element_id: usize,
+    key: usize,
+    value: Option<String>,
+  ) {
+    if let Some(Some(element)) = self.elements.get_mut(element_id) {
+      let property_id: CSSProperty = key.into();
+      if let Some(value) = value {
+        let (transformed, _) = query_transform_rules(&property_id, &value);
+        if transformed.is_empty() {
+          element.set_style(property_id.to_string(), value);
+        } else {
+          for (k, v) in transformed {
+            element.set_style(k.to_string(), v.to_string());
+          }
+        }
+      }
     }
-    buffer.push_str(r#"><template shadowrootmode="open"><style>"#);
-    buffer.push_str(&self.style_manager.get_css_string());
-    buffer.push_str("</style>");
-    self.render_element(element_id, &mut buffer);
-    buffer.push_str("</template></lynx-view>");
-    buffer
   }
 
-  pub fn add_class(&mut self, element_id: usize, class_name: String) {
+  pub fn set_inline_styles_in_str(&mut self, element_id: usize, styles: String) -> bool {
+    let transformed_style_str = transform_inline_style_string(&styles);
+    if transformed_style_str == styles {
+      return false;
+    }
+    if let Some(Some(element)) = self.elements.get_mut(element_id) {
+      element.set_attribute("style".to_string(), transformed_style_str);
+    }
+    true
+  }
+
+  pub fn get_inline_styles_in_key_value_vec(&mut self, element_id: usize, k_v_vec: Vec<String>) {
+    let transformed_style_str = transform_inline_style_key_value_vec(k_v_vec);
+    if let Some(Some(element)) = self.elements.get_mut(element_id) {
+      element.set_attribute("style".to_string(), transformed_style_str);
+    }
+  }
+
+  pub fn add_class(&mut self, element_id: usize, class_name: String) -> Result<(), JsError> {
     if let Some(Some(element)) = self.elements.get_mut(element_id) {
       let classes_attr = element.attributes.entry("class".to_string()).or_default();
       let exists = classes_attr.split_whitespace().any(|c| c == class_name);
@@ -146,6 +209,7 @@ impl MainThreadServerContext {
         classes_attr.push_str(&class_name);
       }
     }
+    Ok(())
   }
 
   pub fn get_attribute(&self, element_id: usize, key: String) -> Option<String> {
@@ -174,6 +238,21 @@ impl MainThreadServerContext {
     } else {
       None
     }
+  }
+
+  pub fn generate_html(&self, element_id: usize) -> String {
+    let mut buffer = String::with_capacity(4096);
+    buffer.push_str("<lynx-view");
+    if !self.view_attributes.is_empty() {
+      buffer.push(' ');
+      buffer.push_str(&self.view_attributes);
+    }
+    buffer.push_str(r#"><template shadowrootmode="open"><style>"#);
+    buffer.push_str(&self.style_manager.get_css_string());
+    buffer.push_str("</style>");
+    self.render_element(element_id, &mut buffer);
+    buffer.push_str("</template></lynx-view>");
+    buffer
   }
 }
 
@@ -287,12 +366,12 @@ mod tests {
 
   #[test]
   fn test_html_generation() {
-    let mut ctx = MainThreadServerContext::new("".to_string());
+    let mut ctx = MainThreadServerContext::new("".to_string(), true);
 
     // Create <div>
     let div_id = ctx.create_element("div".to_string());
     ctx.set_attribute(div_id, "id".to_string(), "container".to_string());
-    ctx.set_style(div_id, "color".to_string(), "red".to_string());
+    ctx.add_inline_style_raw_string_key(div_id, "color", Some("red".to_string()));
 
     // Create <span> child
     let span_id = ctx.create_element("span".to_string());
@@ -316,11 +395,11 @@ mod tests {
 
   #[test]
   fn test_set_style_empty_value() {
-    let mut ctx = MainThreadServerContext::new("".to_string());
+    let mut ctx = MainThreadServerContext::new("".to_string(), true);
     let div_id = ctx.create_element("div".to_string());
 
     // This should not panic
-    ctx.set_style(div_id, "background-color".to_string(), "".to_string());
+    ctx.add_inline_style_raw_string_key(div_id, "background-color", Some("".to_string()));
 
     let html = ctx.generate_html(div_id);
     // Should not contain the style property since we ignored the empty value

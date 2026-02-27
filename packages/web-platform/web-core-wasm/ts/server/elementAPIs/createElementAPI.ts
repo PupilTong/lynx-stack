@@ -9,9 +9,8 @@ import { MainThreadServerContext, StyleSheetResource } from '../wasm.js';
 import {
   LYNX_TAG_TO_HTML_TAG_MAP,
   uniqueIdSymbol,
-  cssIdAttribute,
-  lynxEntryNameAttribute,
   lynxDefaultDisplayLinearAttribute,
+  lynxEntryNameAttribute,
 } from '../../constants.js';
 import type {
   AddClassPAPI,
@@ -82,22 +81,20 @@ export type SSRBinding = {
   ssrResult: string;
 };
 
-// Internal strict cast
-function getServerElement(element: unknown): ServerElement {
-  return element as ServerElement;
-}
-
 export function createElementAPI(
   mtsBinding: SSRBinding,
+  styleInfo: Uint8Array | undefined,
+  viewAttributes: string,
   config: {
     enableCSSSelector: boolean;
     defaultOverflowVisible: boolean;
     defaultDisplayLinear: boolean;
-    viewAttributes?: string;
   },
-  styleInfo?: Uint8Array,
 ): { globalThisAPIs: ElementPAPIs; wasmContext: MainThreadServerContext } {
-  const wasmContext = new MainThreadServerContext(config.viewAttributes ?? '');
+  const wasmContext = new MainThreadServerContext(
+    viewAttributes,
+    config.enableCSSSelector,
+  );
   if (styleInfo) {
     const resource = new StyleSheetResource(styleInfo, undefined);
     wasmContext.push_style_sheet(resource);
@@ -105,144 +102,52 @@ export function createElementAPI(
 
   let pageElementId: number | undefined;
 
-  function getAttributeInternal(
-    el: ServerElement,
+  function getAttribute(
+    element: ServerElement,
     key: string,
   ): string | undefined {
-    return wasmContext.get_attribute(el[uniqueIdSymbol], key) || undefined;
+    return wasmContext.get_attribute(element[uniqueIdSymbol], key) || undefined;
   }
-
-  // Wrapper for external calls where we only have unknown/HTMLElement
-  function setAttribute(element: unknown, key: string, value: string) {
-    const el = getServerElement(element);
-    wasmContext.set_attribute(el[uniqueIdSymbol], key, value);
-  }
-
-  function getAttribute(element: unknown, key: string): string | undefined {
-    return getAttributeInternal(getServerElement(element), key);
-  }
-
-  // --- CSSOG Implementations ---
-  const __SetCSSIdForCSSOG: SetCSSIdPAPI = (
-    elements: HTMLElement[],
-    cssId: number | null,
-    entryName?: string,
-  ) => {
-    for (const element of elements) {
-      const el = getServerElement(element);
-      if (cssId !== 0) {
-        wasmContext.set_attribute(
-          el[uniqueIdSymbol],
-          cssIdAttribute,
-          cssId === null ? '' : String(cssId),
-        );
-      }
-      if (entryName) {
-        wasmContext.set_attribute(
-          el[uniqueIdSymbol],
-          lynxEntryNameAttribute,
-          entryName,
-        );
-      }
-      const cls = getAttributeInternal(el, 'class');
-      if (cls) {
-        __SetClassesForCSSOG(element, cls);
-      }
-    }
-  };
-
-  const __SetClassesForCSSOG: SetClassesPAPI = (
-    element: HTMLElement,
-    classNames: string | null,
-  ) => {
-    const el = getServerElement(element);
-
-    // Inline __SetClasses logic to avoid redundant lookups
-    const clsVal = classNames || '';
-    wasmContext.set_attribute(el[uniqueIdSymbol], 'class', clsVal);
-
-    const cssId = getAttributeInternal(el, cssIdAttribute);
-    const entryName = getAttributeInternal(el, lynxEntryNameAttribute);
-
-    // Direct WASM call with cached values
-    wasmContext.update_css_og_style(
-      el[uniqueIdSymbol],
-      Number(cssId) || 0,
-      clsVal.split(/\s+/),
-      entryName,
-    );
-  };
-
-  const __AddClassForCSSOG: AddClassPAPI = (
-    element: HTMLElement,
-    className: string,
-  ) => {
-    const el = getServerElement(element);
-    wasmContext.add_class(el[uniqueIdSymbol], className);
-
-    const cssId = getAttributeInternal(el, cssIdAttribute);
-    const entryName = getAttributeInternal(el, lynxEntryNameAttribute);
-    const newClassName = getAttributeInternal(el, 'class') ?? '';
-
-    wasmContext.update_css_og_style(
-      el[uniqueIdSymbol],
-      Number(cssId) || 0,
-      newClassName.split(/\s+/),
-      entryName,
-    );
-  };
 
   const __SetCSSId: SetCSSIdPAPI = (
     elements: HTMLElement[],
     cssId: number | null,
     entryName?: string,
   ) => {
-    for (const element of elements) {
-      if (cssId === 0) {
-        // Skip setting cssIdAttribute for 0 to match CSR behavior
-        continue;
-      }
-      const el = getServerElement(element);
-      wasmContext.set_attribute(
-        el[uniqueIdSymbol],
-        cssIdAttribute,
-        cssId === null ? '' : String(cssId),
-      );
-      if (entryName) {
-        wasmContext.set_attribute(
-          el[uniqueIdSymbol],
-          lynxEntryNameAttribute,
-          entryName,
-        );
-      }
-    }
+    const uniqueIds = elements.map(
+      (element) => (element as ServerElement)[uniqueIdSymbol],
+    );
+    wasmContext.set_css_id(new Uint32Array(uniqueIds), cssId ?? 0, entryName);
   };
 
   const __SetClasses: SetClassesPAPI = (
     element: HTMLElement,
     classname: string | null,
   ) => {
-    setAttribute(element, 'class', classname || '');
+    const el = element as ServerElement;
+    if (classname) {
+      wasmContext.set_attribute(el[uniqueIdSymbol], 'class', classname);
+    } else {
+      wasmContext.remove_attribute(el[uniqueIdSymbol], 'class');
+    }
   };
 
   const __AddClass: AddClassPAPI = (
     element: HTMLElement,
     className: string,
   ) => {
-    const el = getServerElement(element);
+    const el = element as ServerElement;
     wasmContext.add_class(el[uniqueIdSymbol], className);
   };
-
-  const isCSSOG = !config.enableCSSSelector;
 
   return {
     globalThisAPIs: {
       // Pure/Throwing Methods
       __GetID: ((element: HTMLElement) => {
-        return getAttribute(element, 'id') ?? null;
+        return getAttribute(element as ServerElement, 'id') ?? null;
       }) as GetIDPAPI,
       __GetTag: ((element: HTMLElement) => {
-        const el = getServerElement(element);
+        const el = element as ServerElement;
         const tag = wasmContext.get_tag(el[uniqueIdSymbol]) ?? '';
         // Reverse-map HTML tag to Lynx tag (consistent with CSR `__GetTag` behavior)
         for (
@@ -255,14 +160,14 @@ export function createElementAPI(
         return tag;
       }) as GetTagPAPI,
       __GetAttributes: ((element: HTMLElement) => {
-        const el = getServerElement(element);
+        const el = element as ServerElement;
         return wasmContext.get_attributes(el[uniqueIdSymbol]);
       }) as GetAttributesPAPI,
       __GetAttributeByName: (element: unknown, name: string) => {
-        return getAttribute(element, name) ?? null;
+        return getAttribute(element as ServerElement, name) ?? null;
       },
       __GetClasses: ((element: HTMLElement) => {
-        const cls = getAttribute(element, 'class');
+        const cls = getAttribute(element as ServerElement, 'class');
         if (!cls) return [];
         return cls.split(/\s+/).filter((c) => c.length > 0);
       }) as GetClassesPAPI,
@@ -290,9 +195,18 @@ export function createElementAPI(
       __ReplaceElement,
       __SwapElement,
 
-      __SetCSSId: isCSSOG ? __SetCSSIdForCSSOG : __SetCSSId,
-      __SetClasses: isCSSOG ? __SetClassesForCSSOG : __SetClasses,
-      __AddClass: isCSSOG ? __AddClassForCSSOG : __AddClass,
+      __SetCSSId,
+      __SetClasses: config.enableCSSSelector
+        ? __SetClasses
+        : ((element, classname) => {
+          __SetClasses(element, classname);
+          const el = element as ServerElement;
+          wasmContext.update_css_og_style(
+            el[uniqueIdSymbol],
+            getAttribute(el, lynxEntryNameAttribute),
+          );
+        }),
+      __AddClass,
 
       __AddConfig,
       __UpdateComponentInfo,
@@ -406,7 +320,7 @@ export function createElementAPI(
           | undefined
           | UpdateListInfoAttributeValue,
       ) => {
-        const el = getServerElement(element);
+        const el = element as ServerElement;
         let valStr = '';
         if (value == null) {
           valStr = '';
@@ -420,14 +334,27 @@ export function createElementAPI(
         element: HTMLElement,
         value: string | Record<string, string> | undefined,
       ) => {
-        const el = getServerElement(element);
-        const id = el[uniqueIdSymbol];
-        if (typeof value === 'string') {
-          wasmContext.set_attribute(id, 'style', value);
-        } else if (value && typeof value === 'object') {
-          const keys = Object.keys(value);
-          const values = keys.map((k) => String((value as any)[k]));
-          wasmContext.set_inline_styles(id, keys, values);
+        const uniqueId = (element as ServerElement)[uniqueIdSymbol];
+        if (!value) {
+          wasmContext.remove_attribute(uniqueId, 'style');
+        } else {
+          if (typeof value === 'string') {
+            if (
+              !wasmContext.set_inline_styles_in_str(
+                uniqueId,
+                value,
+              )
+            ) {
+              wasmContext.set_attribute(uniqueId, 'style', value);
+            }
+          } else if (!value) {
+            wasmContext.remove_attribute(uniqueId, 'style');
+          } else {
+            wasmContext.get_inline_styles_in_key_value_vec(
+              uniqueId,
+              Object.entries(value).flat().map((item) => item.toString()),
+            );
+          }
         }
       }) as SetInlineStylesPAPI,
 
@@ -436,15 +363,23 @@ export function createElementAPI(
         key: string | number,
         value: string | number | null | undefined,
       ) => {
-        // Rust `set_style` panics on empty string because removing style is not supported yet
-        // see main_thread_server_context.rs -> set_style -> query_transform_rules
-        if (value === null || value === undefined || value === '') {
-          return;
+        const uniqueId = (element as ServerElement)[uniqueIdSymbol];
+        if (typeof value != 'string') {
+          value = (value as number).toString();
         }
-        const el = getServerElement(element);
-        const keyStr = key.toString();
-        const valStr = value.toString();
-        wasmContext.set_style(el[uniqueIdSymbol], keyStr, valStr);
+        if (typeof key === 'number') {
+          return wasmContext.set_inline_styles_number_key(
+            uniqueId,
+            key,
+            value as string | null,
+          );
+        } else {
+          return wasmContext.add_inline_style_raw_string_key(
+            uniqueId,
+            key.toString(),
+            value as string | null,
+          );
+        }
       }) as AddInlineStylePAPI,
 
       __FlushElementTree: (() => {
@@ -454,7 +389,11 @@ export function createElementAPI(
       }),
 
       __SetID: ((element: HTMLElement, id: string | null) => {
-        setAttribute(element, 'id', id ?? '');
+        wasmContext.set_attribute(
+          (element as ServerElement)[uniqueIdSymbol],
+          'id',
+          id ?? '',
+        );
       }) as SetIDPAPI,
     },
     wasmContext,

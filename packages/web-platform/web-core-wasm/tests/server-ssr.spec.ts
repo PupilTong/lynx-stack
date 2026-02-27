@@ -18,7 +18,12 @@ describe('Server SSR', () => {
       defaultOverflowVisible: false,
       defaultDisplayLinear: true,
     };
-    const { globalThisAPIs: api } = createElementAPI(binding, config);
+    const { globalThisAPIs: api } = createElementAPI(
+      binding,
+      undefined,
+      '',
+      config,
+    );
 
     // Create Page
     const page = api.__CreatePage('0', 0);
@@ -56,6 +61,8 @@ describe('Server SSR', () => {
     const config = { enableCSSSelector: true };
     const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
       binding,
+      undefined,
+      '',
       config,
     );
 
@@ -86,6 +93,8 @@ describe('Server SSR', () => {
     };
     const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
       binding,
+      undefined,
+      '',
       config,
     );
 

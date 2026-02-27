@@ -352,12 +352,12 @@ async function handleJSON(
     for (const [key, code] of Object.entries(json.lepusCode)) {
       if (typeof code !== 'string') continue;
       const prefix =
-        `(function(){ "use strict"; const navigator=void 0,postMessage=void 0,window=void 0; ${
+        `//# allFunctionsCalledOnLoad\n(function(){ "use strict"; const navigator=void 0,postMessage=void 0,window=void 0; ${
           isLazy ? 'module.exports=' : ''
         } `;
       const suffix = ` \n })()\n//# sourceURL=${url}/${key}\n`;
       const blob = new Blob([prefix, code, suffix], {
-        type: 'text/javascript;',
+        type: 'text/javascript; charset=utf-8',
       });
       blobMap[key] = URL.createObjectURL(blob);
     }

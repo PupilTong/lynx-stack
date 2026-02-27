@@ -8,6 +8,8 @@ describe('Server SSR Bulk Styles', () => {
     const config = { enableCSSSelector: true };
     const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
       binding,
+      undefined,
+      '',
       config,
     );
 
@@ -36,6 +38,8 @@ describe('Server SSR Bulk Styles', () => {
     const config = { enableCSSSelector: true };
     const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
       binding,
+      undefined,
+      '',
       config,
     );
 
