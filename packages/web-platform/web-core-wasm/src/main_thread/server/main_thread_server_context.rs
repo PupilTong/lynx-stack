@@ -131,7 +131,13 @@ impl MainThreadServerContext {
       0
     };
 
-    let element = LynxElementData::new_with_tag_name(parent_id, css_id, component_id, tag_name);
+    let mut element = LynxElementData::new_with_tag_name(parent_id, css_id, component_id, tag_name);
+    if css_id != 0 {
+      element.set_attribute(
+        crate::constants::CSS_ID_ATTRIBUTE.to_string(),
+        css_id.to_string(),
+      );
+    }
     self.elements.push(Some(element));
     id
   }
@@ -384,12 +390,12 @@ mod tests {
     let mut ctx = MainThreadServerContext::new("".to_string(), true);
 
     // Create <div>
-    let div_id = ctx.create_element("div".to_string());
+    let div_id = ctx.create_element("div".to_string(), None, None, None);
     ctx.set_attribute(div_id, "id".to_string(), "container".to_string());
     ctx.add_inline_style_raw_string_key(div_id, "color", Some("red".to_string()));
 
     // Create <span> child
-    let span_id = ctx.create_element("span".to_string());
+    let span_id = ctx.create_element("span".to_string(), None, None, None);
     ctx.set_attribute(span_id, "class".to_string(), "text".to_string());
     ctx.append_child(div_id, span_id);
 
@@ -411,7 +417,7 @@ mod tests {
   #[test]
   fn test_set_style_empty_value() {
     let mut ctx = MainThreadServerContext::new("".to_string(), true);
-    let div_id = ctx.create_element("div".to_string());
+    let div_id = ctx.create_element("div".to_string(), None, None, None);
 
     // This should not panic
     ctx.add_inline_style_raw_string_key(div_id, "background-color", Some("".to_string()));

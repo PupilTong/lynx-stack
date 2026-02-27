@@ -4,6 +4,10 @@ import { createElementAPI } from '../ts/client/mainthread/elementAPIs/createElem
 import { WASMJSBinding } from '../ts/client/mainthread/elementAPIs/WASMJSBinding.js';
 import { vi } from 'vitest';
 import { cssIdAttribute } from '../ts/constants.js';
+import {
+  createElementAPI as createServerElementAPI,
+  SSRBinding,
+} from '../ts/server/elementAPIs/createElementAPI.js';
 describe('Element APIs', () => {
   let lynxViewDom: HTMLElement;
   let rootDom: ShadowRoot;
@@ -1327,5 +1331,81 @@ describe('Element APIs', () => {
     expect(spy).toHaveBeenCalledWith(element);
     expect(classes).toEqual(expect.arrayContaining(['foo', 'bar']));
     expect(classes.length).toBe(2);
+  });
+
+  describe('Server Element APIs SSR Propagation', () => {
+    test('create element infer css id from parent component in SSR', () => {
+      const binding: SSRBinding = {
+        ssrResult: '',
+      };
+      const config = {
+        enableCSSSelector: true,
+        defaultOverflowVisible: false,
+        defaultDisplayLinear: true,
+      };
+      const { globalThisAPIs: api, wasmContext: wasmCtx } =
+        createServerElementAPI(
+          binding,
+          undefined,
+          '',
+          config,
+        );
+
+      const root = api.__CreatePage('page', 0);
+      const parentComponent = api.__CreateComponent(
+        api.__GetElementUniqueID(root),
+        'id',
+        100,
+        'test_entry',
+        'name',
+      );
+      const parentComponentUniqueId = api.__GetElementUniqueID(parentComponent);
+      const view = api.__CreateElement('view', parentComponentUniqueId);
+
+      api.__AppendElement(parentComponent, view);
+      api.__AppendElement(root, parentComponent);
+
+      const viewUid = api.__GetElementUniqueID(view);
+      const html = wasmCtx.generate_html(viewUid);
+
+      expect(html).toContain('l-css-id="100"');
+    });
+
+    test('create element wont infer css id if parent css id is 0 in SSR', () => {
+      const binding: SSRBinding = {
+        ssrResult: '',
+      };
+      const config = {
+        enableCSSSelector: true,
+        defaultOverflowVisible: false,
+        defaultDisplayLinear: true,
+      };
+      const { globalThisAPIs: api, wasmContext: wasmCtx } =
+        createServerElementAPI(
+          binding,
+          undefined,
+          '',
+          config,
+        );
+
+      const root = api.__CreatePage('page', 0);
+      const parentComponent = api.__CreateComponent(
+        api.__GetElementUniqueID(root),
+        'id',
+        0,
+        'test_entry',
+        'name',
+      );
+      const parentComponentUniqueId = api.__GetElementUniqueID(parentComponent);
+      const view = api.__CreateElement('view', parentComponentUniqueId);
+
+      api.__AppendElement(parentComponent, view);
+      api.__AppendElement(root, parentComponent);
+
+      const viewUid = api.__GetElementUniqueID(view);
+      const html = wasmCtx.generate_html(viewUid);
+
+      expect(html).not.toContain('l-css-id');
+    });
   });
 });
