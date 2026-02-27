@@ -1509,7 +1509,7 @@ exports[`executeTemplate should run lepusCode.root from config-css-selector-fals
       <x-view
         class="background-yellow"
         id="target"
-        style="height: 100px; width: 100px; backgroundcolor: green"
+        style="height: 100px; width: 100px; background-color: green"
       ></x-view></div></template
 ></lynx-view>
 "

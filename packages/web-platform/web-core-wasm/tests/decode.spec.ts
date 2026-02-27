@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { decodeTemplate } from '../ts/server/decode.js';
-import { MagicHeader, TemplateSectionLabel } from '../ts/constants.js';
+import {
+  MagicHeader0,
+  MagicHeader1,
+  TemplateSectionLabel,
+} from '../ts/constants.js';
 import * as wasm from '../ts/server/wasm.js';
 
 vi.mock('../ts/server/wasm.js', () => ({
@@ -49,7 +53,6 @@ function encodeBinaryMap(map: Record<string, string>): Uint8Array {
 }
 
 function createTemplate(callbacks: {
-  magic?: bigint;
   version?: number;
   sections?: Array<{ label: number; content: Uint8Array }>;
 } = {}): Uint8Array {
@@ -57,11 +60,9 @@ function createTemplate(callbacks: {
 
   // Magic Header
   const magicBuf = new Uint8Array(8);
-  // @ts-ignore
-  const magicVal = callbacks.magic !== undefined
-    ? callbacks.magic
-    : BigInt(MagicHeader);
-  new DataView(magicBuf.buffer).setBigUint64(0, magicVal, true);
+  const view = new DataView(magicBuf.buffer);
+  view.setUint32(0, MagicHeader0, true);
+  view.setUint32(4, MagicHeader1, true);
   parts.push(magicBuf);
 
   // Version
@@ -109,7 +110,7 @@ describe('decodeTemplate', () => {
   });
 
   it('should throw if magic header is invalid', () => {
-    const buffer = createTemplate({ magic: BigInt(12345) });
+    const buffer = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(() => decodeTemplate(buffer)).toThrow('Invalid Magic Header');
   });
 

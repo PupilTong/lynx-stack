@@ -1,4 +1,8 @@
-import { TemplateSectionLabel, MagicHeader } from '../constants.js';
+import {
+  TemplateSectionLabel,
+  MagicHeader0,
+  MagicHeader1,
+} from '../constants.js';
 
 import { decode_style_info } from './wasm.js';
 import { decodeBinaryMap } from '../common/decodeUtils.js';
@@ -20,9 +24,10 @@ export function decodeTemplate(buffer: Uint8Array): DecodedTemplate {
     buffer.byteOffset,
     buffer.byteLength,
   );
-  const magic = view.getBigUint64(0, true); // Little Endian
+  const magic0 = view.getUint32(0, true);
+  const magic1 = view.getUint32(4, true);
 
-  if (magic !== BigInt(MagicHeader)) {
+  if (magic0 !== MagicHeader0 || magic1 !== MagicHeader1) {
     throw new Error('Invalid Magic Header');
   }
 

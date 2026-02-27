@@ -1,4 +1,8 @@
-import { TemplateSectionLabel, MagicHeader } from '../../constants.js';
+import {
+  TemplateSectionLabel,
+  MagicHeader0,
+  MagicHeader1,
+} from '../../constants.js';
 import type { InitMessage, LoadTemplateMessage, MainMessage } from './types.js';
 
 import { wasmInstance } from '../wasm.js';
@@ -151,8 +155,9 @@ async function handleStream(
     headerBytes.byteOffset,
     headerBytes.byteLength,
   );
-  const magic = view.getBigUint64(0, true); // Little Endian
-  if (magic !== BigInt(MagicHeader)) {
+  const magic0 = view.getUint32(0, true);
+  const magic1 = view.getUint32(4, true);
+  if (magic0 !== MagicHeader0 || magic1 !== MagicHeader1) {
     throw new Error('Invalid Magic Header');
   }
 
