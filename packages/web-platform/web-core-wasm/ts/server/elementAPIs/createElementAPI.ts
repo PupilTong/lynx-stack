@@ -219,16 +219,25 @@ export function createElementAPI(
       __ReplaceElements,
 
       // Context-Dependent Methods
-      __CreateView: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('x-view');
+      __CreateView: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'x-view',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateViewPAPI,
-      __CreateText: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('x-text');
+      __CreateText: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'x-text',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateTextPAPI,
-      __CreateImage: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('x-image');
+      __CreateImage: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'x-image',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateImagePAPI,
       __CreateRawText: ((text: string) => {
@@ -236,13 +245,16 @@ export function createElementAPI(
         wasmContext.set_attribute(id, 'text', text);
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateRawTextPAPI,
-      __CreateScrollView: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('scroll-view');
+      __CreateScrollView: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'scroll-view',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateScrollViewPAPI,
-      __CreateElement: ((tagName: string, _parentComponentUniqueId: number) => {
+      __CreateElement: ((tagName: string, parentComponentUniqueId: number) => {
         const htmlTag = LYNX_TAG_TO_HTML_TAG_MAP[tagName] ?? tagName;
-        const id = wasmContext.create_element(htmlTag);
+        const id = wasmContext.create_element(htmlTag, parentComponentUniqueId);
         const el = { [uniqueIdSymbol]: id };
         if (!config.enableCSSSelector) {
           wasmContext.set_attribute(id, 'l-uid', id.toString());
@@ -250,13 +262,18 @@ export function createElementAPI(
         return el as unknown as DecoratedHTMLElement;
       }) as CreateElementPAPI,
       __CreateComponent: ((
-        _parentComponentUniqueId: number,
+        parentComponentUniqueId: number,
         _componentID: string,
         _cssID: number,
         entryName: string,
         name: string,
       ) => {
-        const id = wasmContext.create_element('x-view'); // Component host
+        const id = wasmContext.create_element(
+          'x-view',
+          parentComponentUniqueId,
+          _cssID,
+          _componentID,
+        ); // Component host
         const el = { [uniqueIdSymbol]: id } as ServerElement;
         if (!config.enableCSSSelector) {
           wasmContext.set_attribute(id, 'l-uid', id.toString());
@@ -269,16 +286,27 @@ export function createElementAPI(
         }
         return el as unknown as DecoratedHTMLElement;
       }) as CreateComponentPAPI,
-      __CreateWrapperElement: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('lynx-wrapper');
+      __CreateWrapperElement: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'lynx-wrapper',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateWrapperElementPAPI,
-      __CreateList: ((_parentComponentUniqueId: number) => {
-        const id = wasmContext.create_element('x-list');
+      __CreateList: ((parentComponentUniqueId: number) => {
+        const id = wasmContext.create_element(
+          'x-list',
+          parentComponentUniqueId,
+        );
         return { [uniqueIdSymbol]: id } as unknown as DecoratedHTMLElement;
       }) as CreateListPAPI,
       __CreatePage: ((_componentID: string, _cssID: number) => {
-        const id = wasmContext.create_element('div');
+        const id = wasmContext.create_element(
+          'div',
+          0,
+          _cssID,
+          _componentID,
+        );
         pageElementId = id;
         const el = { [uniqueIdSymbol]: id } as ServerElement;
         if (!config.enableCSSSelector) {

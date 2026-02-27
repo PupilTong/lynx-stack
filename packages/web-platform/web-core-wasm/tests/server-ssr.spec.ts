@@ -117,4 +117,76 @@ describe('Server SSR', () => {
     // Check string transform (linear-layout-gravity -> --align-self-column:end)
     expect(html).toContain('--align-self-column:end');
   });
+
+  it('should infer css id from parent component in SSR', () => {
+    const binding: SSRBinding = {
+      ssrResult: '',
+    };
+    const config = {
+      enableCSSSelector: true,
+      defaultOverflowVisible: false,
+      defaultDisplayLinear: true,
+    };
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      undefined,
+      '',
+      config,
+    );
+
+    const root = api.__CreatePage('page', 0);
+    const parentComponent = api.__CreateComponent(
+      api.__GetElementUniqueID(root),
+      'id',
+      100,
+      'test_entry',
+      'name',
+    );
+    const parentComponentUniqueId = api.__GetElementUniqueID(parentComponent);
+    const view = api.__CreateElement('view', parentComponentUniqueId);
+
+    api.__AppendElement(parentComponent, view);
+    api.__AppendElement(root, parentComponent);
+
+    const viewUid = api.__GetElementUniqueID(view);
+    const html = wasmCtx.generate_html(viewUid);
+
+    expect(html).toContain('l-css-id="100"');
+  });
+
+  it('should not infer css id if parent css id is 0 in SSR', () => {
+    const binding: SSRBinding = {
+      ssrResult: '',
+    };
+    const config = {
+      enableCSSSelector: true,
+      defaultOverflowVisible: false,
+      defaultDisplayLinear: true,
+    };
+    const { globalThisAPIs: api, wasmContext: wasmCtx } = createElementAPI(
+      binding,
+      undefined,
+      '',
+      config,
+    );
+
+    const root = api.__CreatePage('page', 0);
+    const parentComponent = api.__CreateComponent(
+      api.__GetElementUniqueID(root),
+      'id',
+      0,
+      'test_entry',
+      'name',
+    );
+    const parentComponentUniqueId = api.__GetElementUniqueID(parentComponent);
+    const view = api.__CreateElement('view', parentComponentUniqueId);
+
+    api.__AppendElement(parentComponent, view);
+    api.__AppendElement(root, parentComponent);
+
+    const viewUid = api.__GetElementUniqueID(view);
+    const html = wasmCtx.generate_html(viewUid);
+
+    expect(html).not.toContain('l-css-id');
+  });
 });

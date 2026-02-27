@@ -11,7 +11,6 @@ use crate::style_transformer::{
 };
 use crate::template::template_sections::style_info::css_property::CSSProperty;
 use crate::template::template_sections::style_info::StyleSheetResource;
-// use crate::constants;
 use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
 
@@ -114,9 +113,25 @@ impl MainThreadServerContext {
     self.style_manager.get_css_string()
   }
 
-  pub fn create_element(&mut self, tag_name: String) -> usize {
+  pub fn create_element(
+    &mut self,
+    tag_name: String,
+    parent_component_unique_id: Option<usize>,
+    css_id_opt: Option<i32>,
+    component_id: Option<String>,
+  ) -> usize {
     let id = self.elements.len();
-    let element = LynxElementData::new_with_tag_name(0, 0, None, tag_name);
+    let parent_id = parent_component_unique_id.unwrap_or(0);
+
+    let css_id = if let Some(css_id) = css_id_opt {
+      css_id
+    } else if let Some(Some(parent_component_data)) = self.elements.get(parent_id) {
+      parent_component_data.css_id
+    } else {
+      0
+    };
+
+    let element = LynxElementData::new_with_tag_name(parent_id, css_id, component_id, tag_name);
     self.elements.push(Some(element));
     id
   }
