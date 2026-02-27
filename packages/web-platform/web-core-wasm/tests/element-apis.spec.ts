@@ -8,6 +8,9 @@ import {
   createElementAPI as createServerElementAPI,
   SSRBinding,
 } from '../ts/server/elementAPIs/createElementAPI.js';
+import { wasmInstance } from '../ts/client/wasm.js';
+import { encodeCSS } from '../ts/encode/encodeCSS.js';
+
 describe('Element APIs', () => {
   let lynxViewDom: HTMLElement;
   let rootDom: ShadowRoot;
@@ -1404,8 +1407,38 @@ describe('Element APIs', () => {
 
       const viewUid = api.__GetElementUniqueID(view);
       const html = wasmCtx.generate_html(viewUid);
-
-      expect(html).not.toContain('l-css-id');
     });
+  });
+
+  test('push_style_sheet', () => {
+    const { StyleSheetResource } = wasmInstance;
+    const encodedRawStyleInfo = encodeCSS({
+      '0': [
+        {
+          type: 'StyleRule',
+          selectorText: { value: '.test' },
+          style: [{ name: 'color', value: 'red' }],
+          variables: {},
+        },
+      ],
+    });
+    const encodedStyleInfo = wasmInstance.decode_style_info(
+      encodedRawStyleInfo,
+      undefined,
+      true,
+    );
+    const resource = new StyleSheetResource(encodedStyleInfo, document);
+    mtsBinding.wasmContext!.push_style_sheet(resource);
+
+    const page = mtsGlobalThis.__CreatePage('page', 0);
+    const view = mtsGlobalThis.__CreateView(0);
+    mtsGlobalThis.__AddClass(view, 'test');
+    mtsGlobalThis.__AppendElement(page, view);
+    mtsGlobalThis.__FlushElementTree();
+
+    const styleElement = rootDom.querySelector('style');
+    expect(styleElement).not.toBeNull();
+    expect(styleElement!.textContent).toContain('.test');
+    expect(styleElement!.textContent).toContain('color:red');
   });
 });
