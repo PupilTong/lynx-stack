@@ -318,10 +318,16 @@ export class MessageProcessor {
                 createResource(surface.rootComponentId),
               );
             }
+            // Fall back to a surface-derived id so consumers that key
+            // resources by `messageId` still get a non-empty key when the
+            // protocol message lacks one (the v0.9 stream does not require
+            // `messageId` on every message).
+            const messageId = (message as { messageId?: string }).messageId
+              ?? `surface:${surfaceId}`;
             this.emitUpdate({
               type: 'beginRendering',
               surfaceId,
-              messageId: (message as { messageId?: string }).messageId,
+              messageId,
             });
           }
         }
