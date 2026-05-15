@@ -32,12 +32,21 @@ export type CatalogComponent = ComponentType<GenericComponentProps>;
  * A function-definition manifest as emitted by the extractor under
  * `dist/catalog/functions/<name>.json`.
  */
-export type FunctionManifest = Record<string, {
+export interface CatalogFunctionDefinition {
   name: string;
   description?: string;
   parameters: CatalogSchema;
-  returnType: string;
-}>;
+  returnType:
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'array'
+    | 'object'
+    | 'any'
+    | 'void';
+}
+
+export type FunctionManifest = Record<string, CatalogFunctionDefinition>;
 
 /**
  * A function entry — pair an impl with its name, plus an optional manifest
@@ -47,7 +56,7 @@ export interface CatalogFunctionEntry {
   kind: 'function';
   name: string;
   impl: FunctionImpl;
-  schema?: Record<string, unknown>;
+  definition?: CatalogFunctionDefinition;
 }
 
 /**
@@ -77,7 +86,7 @@ export function defineFunction(
       kind: 'function',
       name,
       impl,
-      schema: definition as unknown as Record<string, unknown>,
+      definition,
     };
   }
   const name = (impl as { displayName?: string; name?: string }).displayName
@@ -121,7 +130,7 @@ export interface Catalog {
 export interface SerializedCatalog {
   version: '0.9';
   components: Array<{ name: string; schema?: CatalogSchema }>;
-  functions?: Array<{ name: string; schema?: Record<string, unknown> }>;
+  functions?: CatalogFunctionDefinition[];
 }
 
 function isFunctionEntry(input: CatalogInput): input is CatalogFunctionEntry {
@@ -223,7 +232,7 @@ export function defineCatalog(inputs: readonly CatalogInput[]): Catalog {
       functionRegistry.register({
         name: input.name,
         impl: input.impl,
-        ...(input.schema ? { schema: input.schema } : {}),
+        ...(input.definition ? { definition: input.definition } : {}),
       });
       continue;
     }
@@ -257,7 +266,7 @@ export function mergeCatalogs(...catalogs: Catalog[]): Catalog {
     functionRegistry.register({
       name: fn.name,
       impl: fn.impl,
-      ...(fn.schema ? { schema: fn.schema } : {}),
+      ...(fn.definition ? { definition: fn.definition } : {}),
     });
   }
   return {
@@ -293,14 +302,9 @@ export function serializeCatalog(catalog: Catalog): SerializedCatalog {
     components.push(out);
   }
   const serialized: SerializedCatalog = { version: '0.9', components };
-  if (catalog.functions.length > 0) {
-    serialized.functions = catalog.functions.map(fn => {
-      const out: { name: string; schema?: Record<string, unknown> } = {
-        name: fn.name,
-      };
-      if (fn.schema !== undefined) out.schema = fn.schema;
-      return out;
-    });
-  }
+  const functions = catalog.functions
+    .filter(fn => fn.definition !== undefined)
+    .map(fn => fn.definition!);
+  if (functions.length > 0) serialized.functions = functions;
   return serialized;
 }

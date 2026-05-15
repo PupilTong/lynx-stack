@@ -322,10 +322,12 @@ export function DemosPage(props: {
           u.searchParams.delete('actionMocks');
           setLynxDevUrl(u.toString());
 
-          // Web render URL: also swap to reference-based form so the
-          // "View on Device" QR is scannable. render.html already supports
-          // messagesUrl / actionMocksUrl query params.
-          if (messagesUrlAbs) {
+          // Web render URL: also swap custom payloads to a reference-based
+          // form so the "View on Device" QR is scannable. Keep known demos
+          // on `?demo=...`; render.html fetches those JSON files in the
+          // browser shell and passes resolved messages into Lynx, which avoids
+          // requiring Lynx's worker runtime to fetch the payload URL.
+          if (messagesUrlAbs && !isKnownDemo) {
             const buildStoredPayloadRenderUrl = (targetBaseUrl: string) => {
               const r = new URL('render.html', targetBaseUrl);
               r.searchParams.set('protocol', protocol.name);

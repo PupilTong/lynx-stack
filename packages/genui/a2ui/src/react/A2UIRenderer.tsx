@@ -4,6 +4,7 @@
 import { memo, useEffect, useMemo, useSyncExternalStore } from '@lynx-js/react';
 import type { ReactNode } from '@lynx-js/react';
 
+import { useA2UIContext } from './useA2UIContext.js';
 import { useAction } from './useAction.js';
 import { useCatalog } from './useCatalog.js';
 import { useResolvedProps } from './useDataBinding.js';
@@ -161,6 +162,7 @@ function NodeRendererImpl(
   },
 ): import('@lynx-js/react').ReactNode {
   const { component: initialComponent, surface } = props;
+  const { catalog: activeCatalog, processor } = useA2UIContext();
   const catalog = useCatalog();
 
   const resource = surface.resources.get(initialComponent.id!);
@@ -187,6 +189,8 @@ function NodeRendererImpl(
     component,
     surface,
     component.dataContextPath,
+    processor,
+    activeCatalog.functions,
   );
 
   const actionProps = useMemo(

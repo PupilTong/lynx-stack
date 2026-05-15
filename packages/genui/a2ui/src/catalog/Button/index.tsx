@@ -2,6 +2,8 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 import { A2UIRenderer } from '../../react/A2UIRenderer.jsx';
+import { useChecks } from '../../react/useChecks.js';
+import type { CheckLike } from '../../react/useChecks.js';
 import type { GenericComponentProps } from '../../store/types.js';
 
 import '../../../styles/catalog/Button.css';
@@ -17,18 +19,61 @@ export interface ButtonProps extends GenericComponentProps {
     event: {
       name: string;
       /** Context is a JSON object map in v0.9. */
-      context?: Record<string, string | number | boolean | { path: string }>;
+      context?: Record<string, unknown>;
+    };
+  } | {
+    functionCall: {
+      call: string;
+      args: Record<string, unknown>;
+      returnType?:
+        | 'string'
+        | 'number'
+        | 'boolean'
+        | 'array'
+        | 'object'
+        | 'any'
+        | 'void';
     };
   };
+  checks?: Array<{
+    condition: boolean | { path: string } | {
+      call: string;
+      args: Record<string, unknown>;
+      returnType?:
+        | 'string'
+        | 'number'
+        | 'boolean'
+        | 'array'
+        | 'object'
+        | 'any'
+        | 'void';
+    };
+    message: string;
+  }>;
 }
 
 export function Button(
   props: ButtonProps,
 ): import('@lynx-js/react').ReactNode {
-  const { action, child, surface, sendAction, variant = 'primary' } = props;
+  const {
+    action,
+    child,
+    id,
+    surface,
+    sendAction,
+    variant = 'primary',
+    dataContextPath,
+  } = props;
+  const checks = props.checks as CheckLike[] | undefined;
+  const { ok, firstFailureMessage } = useChecks({
+    checks,
+    componentId: id ?? '',
+    surface,
+    dataContextPath,
+  });
 
   const handleClick = () => {
-    if (action) {
+    if (action && ok) {
       void sendAction?.(action as Record<string, unknown>);
     }
   };
@@ -38,13 +83,18 @@ export function Button(
     : undefined;
 
   return (
-    <view
-      className={`button button-${variant}`}
-      bindtap={handleClick}
-    >
-      {childResource
-        ? <A2UIRenderer resource={childResource} />
-        : <text>Button</text>}
-    </view>
+    <>
+      <view
+        className={`button button-${variant}${ok ? '' : ' button-invalid'}`}
+        bindtap={handleClick}
+      >
+        {childResource
+          ? <A2UIRenderer resource={childResource} />
+          : <text>Button</text>}
+      </view>
+      {!ok && firstFailureMessage
+        ? <text className='button-error'>{firstFailureMessage}</text>
+        : null}
+    </>
   );
 }
