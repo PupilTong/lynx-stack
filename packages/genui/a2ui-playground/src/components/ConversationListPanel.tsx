@@ -12,6 +12,7 @@ interface ConversationListPanelProps {
   isPersistent: boolean;
   onCreate: () => void;
   onSwitch: (id: string) => void;
+  onShare: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onRemove: (id: string) => void;
 }
@@ -33,6 +34,7 @@ export function ConversationListPanel(props: ConversationListPanelProps) {
     onCreate,
     onRemove,
     onRename,
+    onShare,
     onSwitch,
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -137,6 +139,15 @@ export function ConversationListPanel(props: ConversationListPanelProps) {
                   </button>
                 )}
               <div className='conversationListItemActions'>
+                <button
+                  type='button'
+                  className='conversationIconButton'
+                  disabled={disabled || editing}
+                  title='Copy share link'
+                  onClick={() => onShare(conversation.id)}
+                >
+                  Share
+                </button>
                 <button
                   type='button'
                   className='conversationIconButton'

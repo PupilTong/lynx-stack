@@ -19,9 +19,11 @@ import type { StaticDemo } from '../demos.js';
 import { useConversation } from '../hooks/useConversation.js';
 import type { ModelChatMessage } from '../hooks/useConversation.js';
 import { useResizablePanels } from '../hooks/useResizablePanels.js';
+import { loadConversation } from '../storage/conversationRepo.js';
 import { copyToClipboard } from '../utils/clipboard.js';
 import { DEFAULT_A2UI_DEMO_URL } from '../utils/demoUrl.js';
 import type { Protocol } from '../utils/protocol.js';
+import { publishA2UIPayload } from '../utils/publishPayload.js';
 import { buildRenderUrl } from '../utils/renderUrl.js';
 
 interface ChatMessage {
@@ -1786,6 +1788,74 @@ export function AIChatPage(
     void switchTo(id);
   }, [isGenerating, switchTo]);
 
+  const handleShareConversation = useCallback(
+    async (id: string) => {
+      try {
+        let urls: PreviewPayloadUrls | null = null;
+        let fallbackMessages: unknown[] | null = null;
+
+        // Active conversation: the freshest URLs/messages live in refs.
+        if (id === activeId) {
+          urls = latestPreviewPayloadUrlsRef.current;
+          fallbackMessages = latestPreviewMessagesRef.current;
+        }
+
+        // Otherwise (or if the active one hasn't published yet) read the
+        // durable Supabase URLs persisted on the conversation snapshot.
+        if (!urls?.messagesUrl) {
+          const record = await loadConversation(id);
+          const snapshot = record?.snapshot;
+          const fromSnapshot = snapshot?.previewPayloadUrls;
+          const fromMessage = record
+            ? [...record.messages]
+              .reverse()
+              .find((message) => message.previewPayloadUrls?.messagesUrl)
+              ?.previewPayloadUrls
+            : undefined;
+          urls = (fromSnapshot?.messagesUrl ? fromSnapshot : fromMessage)
+            ?? urls;
+          if (
+            !urls?.messagesUrl
+            && (!fallbackMessages || fallbackMessages.length === 0)
+          ) {
+            const previewMessages = snapshot?.previewMessages;
+            if (Array.isArray(previewMessages) && previewMessages.length > 0) {
+              fallbackMessages = previewMessages;
+            }
+          }
+        }
+
+        // No durable URL yet: publish the raw A2UI messages to Supabase.
+        if (
+          !urls?.messagesUrl && fallbackMessages && fallbackMessages.length > 0
+        ) {
+          urls = await publishA2UIPayload(fallbackMessages);
+        }
+
+        if (!urls?.messagesUrl) {
+          showCopyToast(false);
+          return;
+        }
+
+        const link = buildRenderUrl(
+          {
+            protocol,
+            demoUrl: DEFAULT_A2UI_DEMO_URL,
+            messages: [],
+            messagesUrl: urls.messagesUrl,
+            actionMocksUrl: urls.actionMocksUrl,
+            theme,
+          },
+          baseUrl,
+        );
+        showCopyToast(await copyToClipboard(link));
+      } catch {
+        showCopyToast(false);
+      }
+    },
+    [activeId, baseUrl, protocol, showCopyToast, theme],
+  );
+
   const handleRenameConversation = useCallback((id: string, title: string) => {
     void rename(id, title);
   }, [rename]);
@@ -1838,6 +1908,7 @@ export function AIChatPage(
           isPersistent={isPersistent}
           onCreate={handleCreateConversation}
           onSwitch={handleSwitchConversation}
+          onShare={handleShareConversation}
           onRename={handleRenameConversation}
           onRemove={handleRemoveConversation}
         />
