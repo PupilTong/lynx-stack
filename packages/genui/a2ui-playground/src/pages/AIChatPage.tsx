@@ -1100,6 +1100,9 @@ export function AIChatPage(
   const actionAbortRef = useRef<AbortController | null>(null);
   const hydratedActiveIdRef = useRef<string | null>(null);
   const importHandledRef = useRef(false);
+  const shareLinkCacheRef = useRef<
+    Map<string, { updatedAt: number; link: string }>
+  >(new Map());
   const latestPreviewMessagesRef = useRef<unknown[]>([]);
   const generatedCharacterCountRef = useRef(0);
   const latestPreviewPayloadUrlsRef = useRef<PreviewPayloadUrls | null>(null);
@@ -2154,6 +2157,14 @@ export function AIChatPage(
           showCopyToast(false);
           return;
         }
+        // Reuse the link already generated for this conversation while it is
+        // unchanged, so repeated clicks don't upload a fresh copy (and mint a
+        // different URL) every time. `meta.updatedAt` bumps on each new turn.
+        const cached = shareLinkCacheRef.current.get(id);
+        if (cached && cached.updatedAt === record.meta.updatedAt) {
+          showCopyToast(await copyToClipboard(cached.link));
+          return;
+        }
         const doc = serializeConversation(record, protocol.name);
         const conversationUrl = await publishConversation(doc);
         const link = buildConversationShareUrl(
@@ -2161,6 +2172,10 @@ export function AIChatPage(
           baseUrl,
           protocol.name,
         );
+        shareLinkCacheRef.current.set(id, {
+          updatedAt: record.meta.updatedAt,
+          link,
+        });
         showCopyToast(await copyToClipboard(link));
       } catch {
         showCopyToast(false);
