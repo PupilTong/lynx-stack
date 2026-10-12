@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use axum::extract::multipart::{Field, Multipart, MultipartError};
 use axum::extract::{DefaultBodyLimit, FromRequest, Request, State};
 use axum::http::{
-  header::{CACHE_CONTROL, CONTENT_LENGTH, CONTENT_TYPE},
+  header::{CACHE_CONTROL, CONTENT_LENGTH},
   StatusCode,
 };
 use axum::response::{IntoResponse, Response};
@@ -36,6 +36,8 @@ use tokio::sync::{oneshot, watch, Notify, OwnedSemaphorePermit, Semaphore};
 use crate::capture::{shared_workers, CaptureError, CaptureWorkers, WorkerPanicked};
 use crate::headless::{PageLoadOptions, DEFAULT_SCREENSHOT_SETTLE_MS};
 use crate::ssrf::{fetch_http_resource, HttpFetchError};
+pub use crate::tos::TosConfigError;
+use crate::tos::{ScreenshotStore, TosUploadError};
 use crate::visual::{
   compare_uploaded_images, ReferenceImageComparison, VisualEvaluationError, MAX_IMAGE_BYTES,
 };
@@ -263,6 +265,8 @@ pub enum ServerError {
   Io(#[from] io::Error),
   #[error("isolated ZIP capture failed")]
   IsolatedZipCapture,
+  #[error("invalid TOS screenshot storage configuration: {0}")]
+  Tos(#[from] TosConfigError),
 }
 
 impl From<WorkerPanicked> for ServerError {
@@ -274,6 +278,7 @@ impl From<WorkerPanicked> for ServerError {
 #[derive(Clone)]
 struct AppState {
   headless: Arc<CaptureWorkers>,
+  screenshot_store: ScreenshotStore,
   zip_capture_backend: ZipCaptureBackend,
   zip_capture_processes: ZipCaptureProcesses,
 }
@@ -708,9 +713,16 @@ pub async fn serve(port: &str) -> Result<(), ServerError> {
 /// both IPv4 and IPv6 unspecified addresses when no host is provided. Ordinary
 /// native capture runs on one container-owning worker behind a bounded queue;
 /// untrusted uploads use one fresh child process each. Completed captures are
-/// returned as uncompressed BMP bytes.
+/// uploaded to Volcengine TOS and answered with the object's public URL. The
+/// TOS settings come from the `TOS_*` environment variables and are validated
+/// before the server binds, so a misconfigured deployment fails to start
+/// instead of failing every screenshot.
 pub async fn serve_on(host: Option<&str>, port: &str) -> Result<(), ServerError> {
   let port = parse_port(port)?;
+  let screenshot_store = ScreenshotStore::from_env().inspect_err(|error| {
+    // `main` reports errors with `Debug`; say what to fix in plain words too.
+    eprintln!("[ui-judge-server] invalid TOS screenshot storage configuration: {error}");
+  })?;
   let (ipv4_listener, ipv6_listener) = bind_listeners(host, port)?;
   let addresses = [ipv4_listener.as_ref(), ipv6_listener.as_ref()]
     .into_iter()
@@ -725,7 +737,7 @@ pub async fn serve_on(host: Option<&str>, port: &str) -> Result<(), ServerError>
   let zip_capture_processes = ZipCaptureProcesses::new();
   let state = AppState {
     headless: Arc::clone(&headless),
-
+    screenshot_store,
     zip_capture_backend: ZipCaptureBackend::IsolatedProcess,
     zip_capture_processes: zip_capture_processes.clone(),
   };
@@ -914,12 +926,27 @@ async fn render_page_screenshot(
     &request,
   )
   .await?;
-  Ok(
-    (
-      [(CONTENT_TYPE, "image/bmp"), (CACHE_CONTROL, "no-store")],
-      capture.into_bmp(),
-    )
-      .into_response(),
+  screenshot_response(state, capture.into_bmp()).await
+}
+
+/// Uploads a finished capture to TOS and answers with its public URL. This runs
+/// after the render slot is released, so a slow upload never holds a renderer.
+async fn screenshot_response(state: &AppState, bmp: Vec<u8>) -> Result<Response, ApiError> {
+  let url = state
+    .screenshot_store
+    .put_bmp(bmp)
+    .await
+    .map_err(screenshot_upload_api_error)?;
+  Ok(([(CACHE_CONTROL, "no-store")], Json(json!({ "url": url }))).into_response())
+}
+
+fn screenshot_upload_api_error(error: TosUploadError) -> ApiError {
+  // The detail may name the bucket or a TOS error code; keep it in the server
+  // log rather than the response.
+  eprintln!("[ui-judge-server] screenshot upload failed: {error}");
+  ApiError::new(
+    StatusCode::BAD_GATEWAY,
+    "The screenshot could not be uploaded to TOS.",
   )
 }
 
@@ -1338,13 +1365,7 @@ async fn render_zip(
       capture.into_bmp()
     }
   };
-  Ok(
-    (
-      [(CONTENT_TYPE, "image/bmp"), (CACHE_CONTROL, "no-store")],
-      bmp,
-    )
-      .into_response(),
-  )
+  screenshot_response(state, bmp).await
 }
 
 async fn render_staged_source(
@@ -1366,14 +1387,7 @@ async fn render_staged_source(
     &request,
   )
   .await?;
-  let bmp = capture.into_bmp();
-  Ok(
-    (
-      [(CONTENT_TYPE, "image/bmp"), (CACHE_CONTROL, "no-store")],
-      bmp,
-    )
-      .into_response(),
-  )
+  screenshot_response(state, capture.into_bmp()).await
 }
 
 async fn capture_staged_source(
@@ -2081,6 +2095,7 @@ mod tests {
   use ::zip::{CompressionMethod, ZipWriter};
   use axum::body::Body;
   use axum::extract::FromRequest;
+  use axum::http::header::CONTENT_TYPE;
   use axum::http::Request;
   use base64::prelude::{Engine, BASE64_STANDARD};
   use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
@@ -2090,6 +2105,71 @@ mod tests {
   use crate::headless::CapturedPage;
 
   const CONCURRENT_CAPTURE_REQUESTS: usize = 4;
+
+  /// Checks a successful screenshot response and returns the BMP that was
+  /// uploaded to the in-memory store for the URL it names.
+  async fn uploaded_screenshot(store: &ScreenshotStore, response: Response) -> Vec<u8> {
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[CONTENT_TYPE], "application/json");
+    assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+    let body = axum::body::to_bytes(response.into_body(), 4096)
+      .await
+      .expect("read screenshot response");
+    let body: Value = serde_json::from_slice(&body).expect("screenshot response is JSON");
+    assert_eq!(
+      body.as_object().map(|fields| fields.len()),
+      Some(1),
+      "{body}"
+    );
+    let url = body["url"].as_str().expect("response carries a URL");
+    let mut objects = store.stored_objects();
+    assert_eq!(objects.len(), 1, "one capture uploads exactly one object");
+    let (stored_url, bmp) = objects.remove(0);
+    assert_eq!(url, stored_url);
+    assert!(
+      url.starts_with("https://screenshots.tos-cn-beijing.volces.com/screenshot/")
+        && url.ends_with("/screenshot.bmp"),
+      "{url}"
+    );
+    bmp
+  }
+
+  fn state_with_store(store: ScreenshotStore) -> AppState {
+    AppState {
+      headless: scripted_workers(|_| panic!("upload tests must not capture")),
+      zip_capture_backend: ZipCaptureBackend::SharedWorker,
+      zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: store,
+    }
+  }
+
+  #[tokio::test]
+  async fn screenshot_response_returns_only_the_uploaded_url() {
+    let store = ScreenshotStore::in_memory();
+    let state = state_with_store(store.clone());
+    let bmp = vec![b'B', b'M', 1, 2, 3];
+
+    let response = screenshot_response(&state, bmp.clone()).await.unwrap();
+
+    assert_eq!(uploaded_screenshot(&store, response).await, bmp);
+    state.headless.shutdown().unwrap();
+  }
+
+  #[tokio::test]
+  async fn screenshot_upload_failures_are_bad_gateway_without_tos_details() {
+    let store = ScreenshotStore::failing_with_status(403);
+    let state = state_with_store(store.clone());
+
+    let error = screenshot_response(&state, vec![0; 8]).await.unwrap_err();
+
+    assert_eq!(error.status, StatusCode::BAD_GATEWAY);
+    assert_eq!(
+      error.message,
+      "The screenshot could not be uploaded to TOS."
+    );
+    assert!(store.stored_objects().is_empty());
+    state.headless.shutdown().unwrap();
+  }
 
   /// Serves a queue with one deterministic reply per job.
   fn scripted_workers<F>(reply: F) -> Arc<CaptureWorkers>
@@ -2200,6 +2280,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
     for xml in [false, true] {
       let request = Request::builder()
@@ -2364,6 +2445,7 @@ mod tests {
         headless: Arc::clone(&headless),
         zip_capture_backend: ZipCaptureBackend::SharedWorker,
         zip_capture_processes: ZipCaptureProcesses::new(),
+        screenshot_store: ScreenshotStore::in_memory(),
       };
       let form = read_page_screenshot_form(
         multipart_request(
@@ -2381,11 +2463,8 @@ mod tests {
       .await
       .unwrap();
       let response = render_page_screenshot(&state, form, kind).await.unwrap();
-      assert_eq!(response.headers()[CONTENT_TYPE], "image/bmp");
-      let body = axum::body::to_bytes(response.into_body(), MAX_CAPTURE_BMP_BYTES)
-        .await
-        .unwrap();
-      assert_eq!(body.as_ref(), expected_bmp.as_slice());
+      let uploaded = uploaded_screenshot(&state.screenshot_store, response).await;
+      assert_eq!(uploaded.as_slice(), expected_bmp.as_slice());
       headless.shutdown().unwrap();
     }
   }
@@ -2686,6 +2765,7 @@ mod tests {
 
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
     for (entry, source) in [
       ("index.lynxml", b"".as_slice()),
@@ -2769,6 +2849,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
     let error = screenshot_zip_url(
@@ -2796,6 +2877,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
     let error = screenshot_template_url(
@@ -2842,8 +2924,10 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
+    let store = state.screenshot_store.clone();
     let response = screenshot_lynxml(
       State(state),
       multipart_request(
@@ -2858,13 +2942,8 @@ mod tests {
     .await
     .expect("render LynXML source");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.headers()[CONTENT_TYPE], "image/bmp");
-    assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
-    let body = axum::body::to_bytes(response.into_body(), MAX_CAPTURE_BMP_BYTES)
-      .await
-      .expect("read BMP screenshot response");
-    assert_eq!(body.as_ref(), expected_bmp.as_slice());
+    let uploaded = uploaded_screenshot(&store, response).await;
+    assert_eq!(uploaded.as_slice(), expected_bmp.as_slice());
     let staged_path = staged_path
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -2911,6 +2990,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
     let request = capture_request("https://example.com/template.js");
     let load_options = PageLoadOptions {
@@ -2960,12 +3040,8 @@ mod tests {
     )
     .await
     .expect("render a staged template with multipart page data");
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.headers()[CONTENT_TYPE], "image/bmp");
-    let body = axum::body::to_bytes(response.into_body(), MAX_CAPTURE_BMP_BYTES)
-      .await
-      .expect("read multipart BMP screenshot response");
-    assert_eq!(body.as_ref(), expected_bmp.as_slice());
+    let uploaded = uploaded_screenshot(&state.screenshot_store, response).await;
+    assert_eq!(uploaded.as_slice(), expected_bmp.as_slice());
     let staged_path = staged_path
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -3013,8 +3089,10 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
+    let store = state.screenshot_store.clone();
     let response = screenshot_zip_upload(
       State(state),
       multipart_request(
@@ -3030,13 +3108,8 @@ mod tests {
     .await
     .expect("render uploaded ZIP");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.headers()[CONTENT_TYPE], "image/bmp");
-    assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
-    let body = axum::body::to_bytes(response.into_body(), MAX_CAPTURE_BMP_BYTES)
-      .await
-      .expect("read BMP screenshot response");
-    assert_eq!(body.as_ref(), expected_bmp.as_slice());
+    let uploaded = uploaded_screenshot(&store, response).await;
+    assert_eq!(uploaded.as_slice(), expected_bmp.as_slice());
     let staged_path = staged_path
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -3116,6 +3189,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     }))
     .await
     .expect("healthy worker must pass readiness");
@@ -3502,6 +3576,7 @@ mod tests {
         headless: Arc::clone(&headless),
         zip_capture_backend: ZipCaptureBackend::IsolatedProcess,
         zip_capture_processes: ZipCaptureProcesses::new(),
+        screenshot_store: ScreenshotStore::in_memory(),
       }),
       zip_request(
         "zip:///missing.lynxml",
@@ -3671,13 +3746,14 @@ mod tests {
       &std::fs::read(&source).expect("read template fixture"),
     )]);
     let global_props = json!({"message": "x".repeat(256 * 1024)}).to_string();
+    let store = ScreenshotStore::in_memory();
     let response = runtime
       .block_on(screenshot_zip_upload(
         State(AppState {
           headless: Arc::clone(&headless),
-
           zip_capture_backend: ZipCaptureBackend::IsolatedProcess,
           zip_capture_processes: ZipCaptureProcesses::new(),
+          screenshot_store: store.clone(),
         }),
         multipart_request(
           "screenshot",
@@ -3690,9 +3766,7 @@ mod tests {
         ),
       ))
       .expect("render an isolated compiled template with large page data");
-    let bmp = runtime
-      .block_on(axum::body::to_bytes(response.into_body(), MAX_IMAGE_BYTES))
-      .unwrap();
+    let bmp = runtime.block_on(uploaded_screenshot(&store, response));
     let rgb = image::load_from_memory(&bmp)
       .expect("decode compiled template screenshot")
       .to_rgb8();
@@ -3719,6 +3793,7 @@ mod tests {
 
           zip_capture_backend: ZipCaptureBackend::IsolatedProcess,
           zip_capture_processes: ZipCaptureProcesses::new(),
+          screenshot_store: ScreenshotStore::in_memory(),
         }),
         multipart_request(
           "screenshot",
@@ -3790,6 +3865,7 @@ mod tests {
 
             zip_capture_backend: ZipCaptureBackend::IsolatedProcess,
             zip_capture_processes: ZipCaptureProcesses::new(),
+            screenshot_store: ScreenshotStore::in_memory(),
           }),
           zip_request("zip:///index.lynxml", upload),
         ))
@@ -3957,6 +4033,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
     for url in [
@@ -3979,6 +4056,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     };
 
     for url in [
@@ -4068,6 +4146,7 @@ mod tests {
       headless: Arc::clone(&headless),
       zip_capture_backend: ZipCaptureBackend::SharedWorker,
       zip_capture_processes: ZipCaptureProcesses::new(),
+      screenshot_store: ScreenshotStore::in_memory(),
     }))
     .await
     .expect_err("unhealthy worker must fail readiness");
